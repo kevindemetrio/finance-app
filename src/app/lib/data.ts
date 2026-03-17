@@ -172,10 +172,18 @@ export function calcBalance(data: MonthData): number {
   return inc + (data.carryover ?? 0) - fix - vr - sav;
 }
 
-export async function getCarryover(year: number, month: number): Promise<number> {
+export async function getCarryover(year: number, month: number, depth = 0): Promise<number> {
+  if (depth > 24) return 0;
   let py = year, pm = month - 1;
   if (pm < 0) { py--; pm = 11; }
   const prev = await loadMonth(py, pm);
+  const isEmpty =
+    prev.incomes.length === 0 &&
+    prev.fixedExpenses.length === 0 &&
+    prev.varExpenses.length === 0 &&
+    prev.savingsEntries.length === 0;
+  if (isEmpty) return 0;
+  prev.carryover = await getCarryover(py, pm, depth + 1);
   const b = calcBalance(prev);
   return b > 0 ? b : 0;
 }
