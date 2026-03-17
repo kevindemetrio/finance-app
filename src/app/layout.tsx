@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 
-import { Inter } from "next/font/google";
-const geist = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
-
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
   title: "Finanzas",

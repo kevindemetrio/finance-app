@@ -25,10 +25,8 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session — do not remove this
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Protect all routes except auth pages
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
@@ -36,7 +34,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users away from auth pages
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
