@@ -177,6 +177,7 @@ export async function getCarryover(year: number, month: number, depth = 0): Prom
   let py = year, pm = month - 1;
   if (pm < 0) { py--; pm = 11; }
   const prev = await loadMonth(py, pm);
+  // If prev month is empty there is nothing to carry over — stop recursion
   const isEmpty =
     prev.incomes.length === 0 &&
     prev.fixedExpenses.length === 0 &&
