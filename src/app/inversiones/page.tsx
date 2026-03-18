@@ -11,6 +11,7 @@ import { createClient } from "../lib/supabase/client";
 import { CategorySection } from "../components/inversiones/CategorySection";
 import { ThemeToggle } from "../components/ThemeProvider";
 import { DesktopTabs, Navbar } from "../components/Navbar";
+import { SeasonWrapper } from "../components/SeasonWrapper";
 
 const CATEGORIES: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
 
