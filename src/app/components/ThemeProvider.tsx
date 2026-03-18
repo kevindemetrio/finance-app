@@ -11,7 +11,7 @@ export function getSeason(date = new Date()): Season {
   if (m === 2 && d >= 20 || m === 3 || m === 4 || m === 5 && d < 21) return "spring";
   if (m === 5 && d >= 21 || m === 6 || m === 7 || m === 8 && d < 22) return "summer";
   if (m === 8 && d >= 22 || m === 9 || m === 10 || m === 11 && d < 21) return "autumn";
-  return "winter";
+  return "spring";
 }
 
 // Season configs — card/UI colours that overlay the background
