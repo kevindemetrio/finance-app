@@ -14,8 +14,8 @@ export interface Entry {
   amount: number;
   date: string;
   paid?: boolean;
-  recurring?: boolean;
   category?: Category;
+  notes?: string;
 }
 
 export interface MonthData {
@@ -75,8 +75,8 @@ function rowToEntry(row: any): Entry {
     amount: Number(row.amount),
     date: row.date,
     paid: row.paid ?? false,
-    recurring: row.recurring ?? false,
     category: row.category ?? undefined,
+    notes: row.notes ?? undefined,
   };
 }
 
@@ -121,8 +121,8 @@ export async function saveEntry(
     amount: entry.amount,
     date: entry.date,
     paid: entry.paid ?? false,
-    recurring: entry.recurring ?? false,
     category: entry.category ?? null,
+    notes: entry.notes ?? null,
     year,
     month,
   });
@@ -140,48 +140,16 @@ export async function saveMonthConfig(year: number, month: number, varBudget: nu
   await supabase.from("month_config").upsert({ user_id: user.id, year, month, var_budget: varBudget });
 }
 
-// ─── Recurring: copy fixed recurring from prev month ──────────────────────────
-
-export async function applyRecurring(year: number, month: number): Promise<void> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  let py = year, pm = month - 1;
-  if (pm < 0) { py--; pm = 11; }
-
-  const { data: existing } = await supabase.from("entries").select("id").eq("year", year).eq("month", month).eq("type", "fixed").limit(1);
-  if (existing && existing.length > 0) return; // already has fixed entries
-
-  const { data: prevFixed } = await supabase.from("entries").select("*").eq("year", py).eq("month", pm).eq("type", "fixed").eq("recurring", true);
-  if (!prevFixed || prevFixed.length === 0) return;
-
-  await supabase.from("entries").insert(
-    prevFixed.map(r => ({
-      user_id: user.id,
-      type: "fixed",
-      name: r.name,
-      amount: r.amount,
-      date: `${year}-${String(month+1).padStart(2,'0')}-01`,
-      paid: false,
-      recurring: true,
-      category: r.category,
-      year,
-      month,
-    }))
-  );
-}
-
-// ─── All entries search ───────────────────────────────────────────────────────
+// ─── Search — by name AND category ───────────────────────────────────────────
 
 export async function searchEntries(query: string): Promise<(Entry & { type: string; year: number; month: number })[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("entries")
     .select("*")
-    .ilike("name", `%${query}%`)
+    .or(`name.ilike.%${query}%,category.ilike.%${query}%`)
     .order("date", { ascending: false })
-    .limit(30);
+    .limit(40);
   if (!data) return [];
   return data.map(r => ({ ...rowToEntry(r), type: r.type, year: r.year, month: r.month }));
 }
@@ -226,13 +194,9 @@ export async function loadGoals(): Promise<Goal[]> {
   const { data } = await supabase.from("goals").select("*").order("created_at");
   if (!data) return [];
   return data.map(r => ({
-    id: r.id,
-    name: r.name,
-    targetAmount: Number(r.target_amount),
-    savedAmount: Number(r.saved_amount),
-    deadline: r.deadline ?? undefined,
-    color: r.color ?? "#1D9E75",
-    createdAt: r.created_at,
+    id: r.id, name: r.name,
+    targetAmount: Number(r.target_amount), savedAmount: Number(r.saved_amount),
+    deadline: r.deadline ?? undefined, color: r.color ?? "#1D9E75", createdAt: r.created_at,
   }));
 }
 
@@ -253,20 +217,14 @@ export async function deleteGoal(id: string): Promise<void> {
   await supabase.from("goals").delete().eq("id", id);
 }
 
-// ─── Dashboard: annual data ───────────────────────────────────────────────────
+// ─── Dashboard annual data ────────────────────────────────────────────────────
 
 export async function loadAnnualData(year: number): Promise<{
-  month: number;
-  income: number;
-  fixed: number;
-  variable: number;
-  savings: number;
-  balance: number;
+  month: number; income: number; fixed: number; variable: number; savings: number; balance: number;
 }[]> {
   const supabase = createClient();
   const { data } = await supabase.from("entries").select("type,amount,month").eq("year", year);
   if (!data) return [];
-
   const months = Array.from({length:12},(_,i)=>({month:i,income:0,fixed:0,variable:0,savings:0,balance:0}));
   for (const row of data) {
     const m = months[row.month];
@@ -305,28 +263,16 @@ export interface RecurringTemplate {
 
 export async function loadTemplates(): Promise<RecurringTemplate[]> {
   const supabase = createClient();
-  const { data } = await supabase
-    .from("recurring_templates")
-    .select("*")
-    .order("sort_order")
-    .order("created_at");
+  const { data } = await supabase.from("recurring_templates").select("*").order("sort_order").order("created_at");
   if (!data) return [];
-  return data.map(r => ({
-    id: r.id,
-    name: r.name,
-    amount: Number(r.amount),
-    category: r.category ?? undefined,
-    sortOrder: r.sort_order ?? 0,
-  }));
+  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), category: r.category ?? undefined, sortOrder: r.sort_order ?? 0 }));
 }
 
 export async function createTemplate(name: string, amount: number, category?: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("recurring_templates").insert({
-    user_id: user.id, name, amount, category: category || null,
-  });
+  await supabase.from("recurring_templates").insert({ user_id: user.id, name, amount, category: category || null });
 }
 
 export async function updateTemplate(id: string, name: string, amount: number, category?: string): Promise<void> {
@@ -343,48 +289,21 @@ export async function importTemplates(year: number, month: number): Promise<Entr
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-
   const templates = await loadTemplates();
   if (templates.length === 0) return [];
-
   const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const rows = templates.map(t => ({
-    id: uid(),
-    user_id: user.id,
-    type: "fixed",
-    name: t.name,
-    amount: t.amount,
-    date: dateStr,
-    paid: false,
-    recurring: true,
-    category: t.category || null,
-    year,
-    month,
+    id: uid(), user_id: user.id, type: "fixed",
+    name: t.name, amount: t.amount, date: dateStr,
+    paid: false, category: t.category || null, notes: null, year, month,
   }));
-
   const { data, error } = await supabase.from("entries").insert(rows).select();
   if (error || !data) return [];
-
-  return data.map(r => ({
-    id: r.id,
-    name: r.name,
-    amount: Number(r.amount),
-    date: r.date,
-    paid: false,
-    recurring: true,
-    category: r.category ?? undefined,
-  }));
+  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), date: r.date, paid: false, category: r.category ?? undefined }));
 }
 
 export async function hasImportedTemplates(year: number, month: number): Promise<boolean> {
   const supabase = createClient();
-  const { data } = await supabase
-    .from("entries")
-    .select("id")
-    .eq("year", year)
-    .eq("month", month)
-    .eq("type", "fixed")
-    .eq("recurring", true)
-    .limit(1);
+  const { data } = await supabase.from("entries").select("id").eq("year", year).eq("month", month).eq("type", "fixed").limit(1);
   return !!(data && data.length > 0);
 }

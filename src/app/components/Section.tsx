@@ -13,7 +13,6 @@ interface Props {
   entries: Entry[];
   showPaid?: boolean;
   showCategory?: boolean;
-  showRecurring?: boolean;
   addPlaceholder?: string;
   headerExtra?: React.ReactNode;
   headerAfter?: React.ReactNode;
@@ -25,8 +24,7 @@ interface Props {
 
 export function Section({
   title, dotColor, totalColor, sign, entries, showPaid, showCategory,
-  showRecurring, addPlaceholder, headerExtra, headerAfter, storageKey,
-  onAdd, onUpdate, onDelete,
+  addPlaceholder, headerExtra, headerAfter, storageKey, onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
   const [open, setOpen] = useState(true);
@@ -48,49 +46,32 @@ export function Section({
   return (
     <div className="card">
       <button
-        type="button"
-        onClick={toggle}
+        type="button" onClick={toggle}
         className="w-full flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${dotColor}`} />
           <span className="text-sm font-medium">{title}</span>
-          {entries.length > 0 && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-600">{entries.length}</span>
-          )}
+          {entries.length > 0 && <span className="text-xs text-neutral-400 dark:text-neutral-600">{entries.length}</span>}
         </div>
         <div className="flex items-center gap-2">
           {headerExtra && <div onClick={e => e.stopPropagation()}>{headerExtra}</div>}
           <span className={`text-sm font-medium ${totalColor}`}>{sign}{fmtEur(total)}</span>
-          <svg
-            className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <svg className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </button>
 
       {open && (
         <>
           {headerAfter}
-          <AddEntryForm
-            placeholder={addPlaceholder}
-            showCategory={showCategory}
-            showRecurring={showRecurring}
-            onAdd={onAdd}
-          />
+          <AddEntryForm placeholder={addPlaceholder} showCategory={showCategory} onAdd={onAdd} />
           {[...entries]
             .map((entry, idx) => ({ entry, idx }))
             .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
             .map(({ entry, idx }) => (
               <EntryRow
-                key={entry.id}
-                entry={entry}
-                sign={sign}
-                colorClass={totalColor}
-                showPaid={showPaid}
-                showCategory={showCategory}
+                key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
+                showPaid={showPaid} showCategory={showCategory}
                 onUpdate={updated => onUpdate(idx, updated)}
                 onDelete={() => onDelete(idx)}
               />

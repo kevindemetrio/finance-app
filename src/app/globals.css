@@ -57,3 +57,19 @@
     @apply bg-neutral-100 dark:bg-neutral-800/60 rounded-xl p-4;
   }
 }
+
+/* Season-aware navbar */
+[data-season] nav {
+  background: var(--season-nav-bg) !important;
+  border-color: var(--season-nav-border) !important;
+}
+
+/* Season-aware cards */
+[data-season] .card {
+  background: var(--season-card-bg) !important;
+  border-color: var(--season-card-border) !important;
+}
+
+[data-season] .metric-card {
+  background: var(--season-metric-bg) !important;
+}

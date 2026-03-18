@@ -120,3 +120,6 @@ create policy "Own recurring templates" on recurring_templates for all
   with check (auth.uid() = user_id);
 
 create index recurring_templates_user on recurring_templates(user_id);
+
+-- ─── Añadir columna notes a entries ──────────────────────────────────────────
+alter table entries add column if not exists notes text;

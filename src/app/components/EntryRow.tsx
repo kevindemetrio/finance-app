@@ -38,36 +38,44 @@ export function CategoryBadge({ cat }: { cat: string }) {
 }
 
 export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUpdate, onDelete }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName]       = useState(entry.name);
-  const [amount, setAmount]   = useState(String(entry.amount));
-  const [date, setDate]       = useState(entry.date ?? todayStr());
-  const [paid, setPaid]       = useState(entry.paid ?? false);
-  const [recurring, setRecurring] = useState(entry.recurring ?? false);
-  const [category, setCategory]   = useState(entry.category ?? "");
+  const [editing, setEditing]   = useState(false);
+  const [name, setName]         = useState(entry.name);
+  const [amount, setAmount]     = useState(String(entry.amount));
+  const [date, setDate]         = useState(entry.date ?? todayStr());
+  const [paid, setPaid]         = useState(entry.paid ?? false);
+  const [category, setCategory] = useState(entry.category ?? "");
+  const [notes, setNotes]       = useState(entry.notes ?? "");
 
   function handleSave() {
     const a = parseFloat(amount);
     if (!name.trim() || isNaN(a) || a <= 0) return;
-    onUpdate({ ...entry, name: name.trim(), amount: a, date, paid, recurring, category: category as Category || undefined });
+    onUpdate({
+      ...entry,
+      name: name.trim(), amount: a, date, paid,
+      category: category as Category || undefined,
+      notes: notes.trim() || undefined,
+    });
     setEditing(false);
   }
 
   function handleCancel() {
     setName(entry.name); setAmount(String(entry.amount));
     setDate(entry.date ?? todayStr()); setPaid(entry.paid ?? false);
-    setRecurring(entry.recurring ?? false); setCategory(entry.category ?? "");
+    setCategory(entry.category ?? ""); setNotes(entry.notes ?? "");
     setEditing(false);
   }
 
   return (
     <div>
+      {/* Main row */}
       <div className="flex items-center gap-2 px-4 py-2.5 text-sm border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-        <span className="flex-1 text-neutral-800 dark:text-neutral-200 truncate">{entry.name}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-neutral-800 dark:text-neutral-200 truncate">{entry.name}</p>
+          {entry.notes && (
+            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5">{entry.notes}</p>
+          )}
+        </div>
         <span className="text-[12px] text-neutral-400 dark:text-neutral-500 w-10 shrink-0">{fmtDate(entry.date)}</span>
-        {entry.recurring && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 shrink-0">↻</span>
-        )}
         {showCategory && entry.category && <CategoryBadge cat={entry.category} />}
         {showPaid && (
           <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
@@ -79,6 +87,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
         <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
       </div>
 
+      {/* Inline edit form */}
       {editing && (
         <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
           <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Descripción" className="flex-1 min-w-[120px]" />
@@ -96,10 +105,12 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
               <option value="1">Cobrado</option>
             </select>
           )}
-          <label className="flex items-center gap-1.5 text-sm text-neutral-600 dark:text-neutral-400 whitespace-nowrap">
-            <input type="checkbox" checked={recurring} onChange={e => setRecurring(e.target.checked)} className="rounded" />
-            Recurrente
-          </label>
+          {/* Notes field — full width row */}
+          <TextInput
+            value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Nota (opcional) — ej: cena cumpleaños de Marina"
+            className="w-full"
+          />
           <SaveButton onClick={handleSave} />
           <GhostButton onClick={handleCancel}>✕</GhostButton>
         </div>
