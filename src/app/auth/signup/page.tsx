@@ -15,7 +15,7 @@ const COINS = [
 function CoinRain() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
-  const MAX = 30;
+  const MAX = 50;
 
   useEffect(() => {
     const scene = sceneRef.current;

@@ -1,0 +1,165 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Category, CATEGORIES, RecurringTemplate,
+  createTemplate, deleteTemplate, loadTemplates, updateTemplate,
+} from "../lib/data";
+import { GhostButton, IconButton, SaveButton, TextInput } from "./ui";
+
+interface Props {
+  onClose: () => void;
+}
+
+export function TemplateManager({ onClose }: Props) {
+  const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingNew, setAddingNew] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  const [newName, setNewName] = useState("");
+  const [newAmt, setNewAmt] = useState("");
+  const [newCat, setNewCat] = useState("");
+
+  const [editName, setEditName] = useState("");
+  const [editAmt, setEditAmt] = useState("");
+  const [editCat, setEditCat] = useState("");
+
+  useEffect(() => {
+    loadTemplates().then(t => { setTemplates(t); setLoading(false); });
+  }, []);
+
+  async function handleAdd() {
+    const a = parseFloat(newAmt);
+    if (!newName.trim() || isNaN(a) || a <= 0) return;
+    await createTemplate(newName.trim(), a, newCat || undefined);
+    setNewName(""); setNewAmt(""); setNewCat(""); setAddingNew(false);
+    loadTemplates().then(setTemplates);
+  }
+
+  function openEdit(t: RecurringTemplate) {
+    setEditId(t.id); setEditName(t.name);
+    setEditAmt(String(t.amount)); setEditCat(t.category ?? "");
+  }
+
+  async function handleSaveEdit() {
+    if (!editId || !editName.trim()) return;
+    const a = parseFloat(editAmt);
+    if (isNaN(a) || a <= 0) return;
+    await updateTemplate(editId, editName.trim(), a, editCat || undefined);
+    setEditId(null);
+    loadTemplates().then(setTemplates);
+  }
+
+  async function handleDelete(id: string) {
+    await deleteTemplate(id);
+    loadTemplates().then(setTemplates);
+  }
+
+  const total = templates.reduce((a, t) => a + t.amount, 0);
+  const fmt = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.4)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-md overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div>
+            <p className="text-sm font-medium">Plantilla de gastos fijos</p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              {templates.length} gastos · −{fmt(total)}/mes
+            </p>
+          </div>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 text-xl leading-none transition-colors">×</button>
+        </div>
+
+        {/* List */}
+        <div className="max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-neutral-400">Cargando...</div>
+          ) : templates.length === 0 && !addingNew ? (
+            <div className="py-8 text-center text-sm text-neutral-400">
+              Sin gastos en la plantilla todavía
+            </div>
+          ) : null}
+
+          {templates.map(t => (
+            <div key={t.id}>
+              {editId === t.id ? (
+                <div className="flex flex-wrap gap-2 px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
+                  <TextInput value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 min-w-[120px]" autoFocus />
+                  <TextInput type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)} className="w-24" />
+                  <select value={editCat} onChange={e => setEditCat(e.target.value)} className="input-base w-32">
+                    <option value="">Categoría</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <SaveButton onClick={handleSaveEdit} />
+                  <GhostButton onClick={() => setEditId(null)}>✕</GhostButton>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0" />
+                  <span className="flex-1 text-neutral-800 dark:text-neutral-200 truncate">{t.name}</span>
+                  {t.category && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 shrink-0">
+                      {t.category}
+                    </span>
+                  )}
+                  <span className="font-medium text-brand-amber shrink-0">−{fmt(t.amount)}</span>
+                  <IconButton onClick={() => openEdit(t)}><PencilIcon /></IconButton>
+                  <IconButton danger onClick={() => handleDelete(t.id)}><XIcon /></IconButton>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add new row */}
+          {addingNew ? (
+            <div className="flex flex-wrap gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800">
+              <TextInput
+                value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="Nombre del gasto" className="flex-1 min-w-[120px]"
+                onKeyDown={e => e.key === "Enter" && handleAdd()} autoFocus
+              />
+              <TextInput
+                type="number" value={newAmt} onChange={e => setNewAmt(e.target.value)}
+                placeholder="€/mes" className="w-24"
+                onKeyDown={e => e.key === "Enter" && handleAdd()}
+              />
+              <select value={newCat} onChange={e => setNewCat(e.target.value)} className="input-base w-32">
+                <option value="">Categoría</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <SaveButton onClick={handleAdd} />
+              <GhostButton onClick={() => { setAddingNew(false); setNewName(""); setNewAmt(""); setNewCat(""); }}>✕</GhostButton>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddingNew(true)}
+              className="w-full text-left px-4 py-3 text-sm text-neutral-400 dark:text-neutral-600 hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors"
+            >
+              + Añadir gasto a plantilla
+            </button>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3.5 border-t border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
+          <p className="text-xs text-neutral-400">Los cambios no afectan a meses anteriores</p>
+          <GhostButton onClick={onClose}>Cerrar</GhostButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PencilIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+}
+function XIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}

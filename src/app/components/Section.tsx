@@ -12,6 +12,8 @@ interface Props {
   sign: "+" | "−";
   entries: Entry[];
   showPaid?: boolean;
+  showCategory?: boolean;
+  showRecurring?: boolean;
   addPlaceholder?: string;
   headerExtra?: React.ReactNode;
   headerAfter?: React.ReactNode;
@@ -22,23 +24,19 @@ interface Props {
 }
 
 export function Section({
-  title, dotColor, totalColor, sign, entries, showPaid,
-  addPlaceholder, headerExtra, headerAfter, storageKey,
+  title, dotColor, totalColor, sign, entries, showPaid, showCategory,
+  showRecurring, addPlaceholder, headerExtra, headerAfter, storageKey,
   onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
   const [open, setOpen] = useState(true);
 
-  // Read from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(lsKey);
-      if (stored !== null) setOpen(stored === "true");
-    } catch {}
+    try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
   }, [lsKey]);
 
   function toggle() {
-    setOpen((prev) => {
+    setOpen(prev => {
       const next = !prev;
       try { localStorage.setItem(lsKey, String(next)); } catch {}
       return next;
@@ -49,26 +47,21 @@ export function Section({
 
   return (
     <div className="card">
-      {/* Header — clickable to collapse */}
       <button
         type="button"
         onClick={toggle}
-        className="w-full flex items-center justify-between px-4 py-3.5
-          border-b border-neutral-100 dark:border-neutral-800
-          hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${dotColor}`} />
           <span className="text-sm font-medium">{title}</span>
-          <span className="text-xs text-neutral-400 dark:text-neutral-600">
-            {entries.length > 0 ? `${entries.length}` : ""}
-          </span>
+          {entries.length > 0 && (
+            <span className="text-xs text-neutral-400 dark:text-neutral-600">{entries.length}</span>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          {headerExtra}
-          <span className={`text-sm font-medium ${totalColor}`}>
-            {sign}{fmtEur(total)}
-          </span>
+        <div className="flex items-center gap-2">
+          {headerExtra && <div onClick={e => e.stopPropagation()}>{headerExtra}</div>}
+          <span className={`text-sm font-medium ${totalColor}`}>{sign}{fmtEur(total)}</span>
           <svg
             className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -78,13 +71,15 @@ export function Section({
         </div>
       </button>
 
-      {/* Collapsible body */}
       {open && (
         <>
           {headerAfter}
-
-          <AddEntryForm placeholder={addPlaceholder} onAdd={onAdd} />
-
+          <AddEntryForm
+            placeholder={addPlaceholder}
+            showCategory={showCategory}
+            showRecurring={showRecurring}
+            onAdd={onAdd}
+          />
           {[...entries]
             .map((entry, idx) => ({ entry, idx }))
             .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
@@ -95,7 +90,8 @@ export function Section({
                 sign={sign}
                 colorClass={totalColor}
                 showPaid={showPaid}
-                onUpdate={(updated) => onUpdate(idx, updated)}
+                showCategory={showCategory}
+                onUpdate={updated => onUpdate(idx, updated)}
                 onDelete={() => onDelete(idx)}
               />
             ))}

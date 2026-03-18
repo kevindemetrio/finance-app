@@ -49,7 +49,7 @@ export default function InversionesPage() {
   const grandTotal = investments.reduce((a, inv) => a + totalContributions(inv), 0);
 
   return (
-    <main className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <SeasonWrapper>
       <Navbar />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10">
@@ -127,7 +127,7 @@ export default function InversionesPage() {
           </div>
         )}
       </div>
-    </main>
+    </SeasonWrapper>
   );
 }
 

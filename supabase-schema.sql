@@ -77,3 +77,46 @@ create policy "Own contributions" on investment_contributions for all
 
 create index investments_user on investments(user_id);
 create index contributions_investment on investment_contributions(investment_id);
+
+-- ─── Nuevas columnas en entries (ejecutar si ya tienes la tabla) ──────────────
+alter table entries add column if not exists recurring boolean default false;
+alter table entries add column if not exists category text;
+
+-- ─── Metas de ahorro ─────────────────────────────────────────────────────────
+create table goals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  target_amount numeric(12,2) not null,
+  saved_amount numeric(12,2) default 0,
+  deadline date,
+  color text default '#1D9E75',
+  created_at timestamptz default now()
+);
+
+alter table goals enable row level security;
+
+create policy "Own goals" on goals for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index goals_user on goals(user_id);
+
+-- ─── Plantilla de gastos recurrentes ─────────────────────────────────────────
+create table recurring_templates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  amount numeric(12,2) not null,
+  category text,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+alter table recurring_templates enable row level security;
+
+create policy "Own recurring templates" on recurring_templates for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index recurring_templates_user on recurring_templates(user_id);
