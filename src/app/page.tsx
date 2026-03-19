@@ -17,6 +17,9 @@ import { Navbar, DesktopTabs } from "./components/Navbar";
 import { CategoryBadge } from "./components/EntryRow";
 import { TemplateManager } from "./components/TemplateManager";
 import { SeasonWrapper } from "./components/SeasonWrapper";
+import { CategoryBudgetPanel } from "./components/CategoryBudgetPanel";
+import { PdfReportButton } from "./components/PdfReportButton";
+import { CategoryBudget, loadCategoryBudgets } from "./lib/data";
 
 function emptyMonth(): MonthData {
   return { incomes:[], fixedExpenses:[], varExpenses:[], savingsEntries:[], varBudget:0, carryover:0 };
@@ -33,6 +36,7 @@ export default function HomePage() {
   const [month, setMonth]            = useState(today.getMonth());
   const [data, setData]              = useState<MonthData>(emptyMonth());
   const [totalSavings, setSavings]   = useState(0);
+  const [catBudgets, setCatBudgets]   = useState<CategoryBudget[]>([]);
   const [loading, setLoading]        = useState(true);
   const [error, setError]            = useState("");
   const [userEmail, setUserEmail]    = useState("");
@@ -54,11 +58,11 @@ export default function HomePage() {
   useEffect(() => {
     const id = ++fetchId.current;
     setLoading(true); setError(""); setImportMsg("");
-    Promise.all([loadMonth(year, month), getCarryover(year, month), getAllTimeSavings(year, month)])
-      .then(([monthData, carryover, savings]) => {
+    Promise.all([loadMonth(year, month), getCarryover(year, month), getAllTimeSavings(year, month), loadCategoryBudgets(year, month)])
+      .then(([monthData, carryover, savings, catBdgs]) => {
         if (id !== fetchId.current) return;
         monthData.carryover = carryover;
-        setData(monthData); setSavings(savings); setLoading(false);
+        setData(monthData); setSavings(savings); setCatBudgets(catBdgs); setLoading(false);
       })
       .catch(() => {
         if (id === fetchId.current) { setError("Error cargando datos."); setLoading(false); }
@@ -191,6 +195,7 @@ export default function HomePage() {
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
           </div>
           <div className="flex items-center gap-1">
+            <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} />
             <ThemeToggle />
             <button onClick={handleLogout} title={userEmail} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
               <LogoutIcon />
@@ -257,6 +262,7 @@ export default function HomePage() {
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} />
+            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} onChange={setCatBudgets} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                 entries={data.incomes} storageKey="incomes"

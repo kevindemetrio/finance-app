@@ -123,3 +123,23 @@ create index recurring_templates_user on recurring_templates(user_id);
 
 -- ─── Añadir columna notes a entries ──────────────────────────────────────────
 alter table entries add column if not exists notes text;
+
+-- ─── Presupuesto por categoría ────────────────────────────────────────────────
+create table if not exists category_budgets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  year int not null,
+  month int not null,
+  category text not null,
+  budget numeric(12,2) not null,
+  created_at timestamptz default now(),
+  unique(user_id, year, month, category)
+);
+
+alter table category_budgets enable row level security;
+
+create policy "Own category budgets" on category_budgets for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists cat_budgets_user_month on category_budgets(user_id, year, month);

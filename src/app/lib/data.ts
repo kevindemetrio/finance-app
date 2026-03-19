@@ -321,3 +321,37 @@ export async function hasImportedTemplates(year: number, month: number): Promise
   const { data } = await supabase.from("entries").select("id").eq("year", year).eq("month", month).eq("type", "fixed").limit(1);
   return !!(data && data.length > 0);
 }
+
+// ─── Category budgets ─────────────────────────────────────────────────────────
+
+export interface CategoryBudget {
+  category: Category;
+  budget: number;
+}
+
+export async function loadCategoryBudgets(year: number, month: number): Promise<CategoryBudget[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("category_budgets")
+    .select("category,budget")
+    .eq("year", year)
+    .eq("month", month);
+  if (!data) return [];
+  return data.map(r => ({ category: r.category as Category, budget: Number(r.budget) }));
+}
+
+export async function saveCategoryBudget(
+  year: number, month: number, category: Category, budget: number
+): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  if (budget <= 0) {
+    await supabase.from("category_budgets")
+      .delete().eq("year", year).eq("month", month).eq("category", category);
+    return;
+  }
+  await supabase.from("category_budgets").upsert({
+    user_id: user.id, year, month, category, budget,
+  }, { onConflict: "user_id,year,month,category" });
+}
