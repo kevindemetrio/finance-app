@@ -412,14 +412,13 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
 
   return (
     <button onClick={generatePdf} disabled={loading}
-      className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400
-        border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-1.5
-        hover:text-neutral-700 dark:hover:text-neutral-200 hover:border-neutral-400
+      className="w-9 h-9 flex items-center justify-center rounded-xl
+        text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800
+        hover:text-neutral-700 dark:hover:text-neutral-200
         transition-colors disabled:opacity-50"
       title="Descargar informe PDF del mes"
     >
-      <PdfIcon />
-      {loading ? "Generando..." : "PDF"}
+      {loading ? <span className="animate-pulse"><PdfIcon /></span> : <PdfIcon />}
     </button>
   );
 }

@@ -259,25 +259,26 @@ export interface RecurringTemplate {
   amount: number;
   category?: Category;
   sortOrder: number;
+  dayOfMonth: number; // 1-28, day of month to set on import
 }
 
 export async function loadTemplates(): Promise<RecurringTemplate[]> {
   const supabase = createClient();
   const { data } = await supabase.from("recurring_templates").select("*").order("sort_order").order("created_at");
   if (!data) return [];
-  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), category: r.category ?? undefined, sortOrder: r.sort_order ?? 0 }));
+  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), category: r.category ?? undefined, sortOrder: r.sort_order ?? 0, dayOfMonth: r.day_of_month ?? 1 }));
 }
 
-export async function createTemplate(name: string, amount: number, category?: string): Promise<void> {
+export async function createTemplate(name: string, amount: number, category?: string, dayOfMonth = 1): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("recurring_templates").insert({ user_id: user.id, name, amount, category: category || null });
+  await supabase.from("recurring_templates").insert({ user_id: user.id, name, amount, category: category || null, day_of_month: dayOfMonth });
 }
 
-export async function updateTemplate(id: string, name: string, amount: number, category?: string): Promise<void> {
+export async function updateTemplate(id: string, name: string, amount: number, category?: string, dayOfMonth = 1): Promise<void> {
   const supabase = createClient();
-  await supabase.from("recurring_templates").update({ name, amount, category: category || null }).eq("id", id);
+  await supabase.from("recurring_templates").update({ name, amount, category: category || null, day_of_month: dayOfMonth }).eq("id", id);
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
@@ -302,18 +303,20 @@ export async function importTemplates(year: number, month: number): Promise<Entr
   const missing = templates.filter(t => !existingNames.has(t.name.toLowerCase().trim()));
   if (missing.length === 0) return [];
 
-  const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const rows = missing.map(t => ({
-    id: uid(), user_id: user.id, type: "fixed",
-    name: t.name, amount: t.amount, date: dateStr,
-    paid: false, category: t.category || null, notes: null, year, month,
-  }));
+  const rows = missing.map(t => {
+    const day = Math.min(t.dayOfMonth || 1, 28);
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return {
+      id: uid(), user_id: user.id, type: "fixed",
+      name: t.name, amount: t.amount, date: dateStr,
+      paid: false, category: t.category || null, notes: null, year, month,
+    };
+  });
 
-  const { data, error } = await supabase.from("entries").insert(rows).select();
-  if (error || !data) return [];
-  return data.map((r: { id: string; name: string; amount: number; date: string; category?: string }) => ({
-    id: r.id, name: r.name, amount: Number(r.amount), date: r.date, paid: false, category: r.category ?? undefined,
-  }));
+  const { data, error } = await supabase.from("entries").insert(rows).select("*");
+  if (error) { console.error("importTemplates error:", error); return []; }
+  if (!data) return [];
+  return data.map(rowToEntry);
 }
 
 export async function hasImportedTemplates(year: number, month: number): Promise<boolean> {

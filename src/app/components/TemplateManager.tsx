@@ -11,19 +11,23 @@ interface Props {
   onClose: () => void;
 }
 
+const DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
+
 export function TemplateManager({ onClose }: Props) {
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [editId, setEditId]       = useState<string | null>(null);
 
   const [newName, setNewName] = useState("");
-  const [newAmt, setNewAmt] = useState("");
-  const [newCat, setNewCat] = useState("");
+  const [newAmt, setNewAmt]   = useState("");
+  const [newCat, setNewCat]   = useState("");
+  const [newDay, setNewDay]   = useState("1");
 
   const [editName, setEditName] = useState("");
-  const [editAmt, setEditAmt] = useState("");
-  const [editCat, setEditCat] = useState("");
+  const [editAmt, setEditAmt]   = useState("");
+  const [editCat, setEditCat]   = useState("");
+  const [editDay, setEditDay]   = useState("1");
 
   useEffect(() => {
     loadTemplates().then(t => { setTemplates(t); setLoading(false); });
@@ -32,21 +36,24 @@ export function TemplateManager({ onClose }: Props) {
   async function handleAdd() {
     const a = parseFloat(newAmt);
     if (!newName.trim() || isNaN(a) || a <= 0) return;
-    await createTemplate(newName.trim(), a, newCat || undefined);
-    setNewName(""); setNewAmt(""); setNewCat(""); setAddingNew(false);
+    await createTemplate(newName.trim(), a, newCat || undefined, parseInt(newDay) || 1);
+    setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); setAddingNew(false);
     loadTemplates().then(setTemplates);
   }
 
   function openEdit(t: RecurringTemplate) {
-    setEditId(t.id); setEditName(t.name);
-    setEditAmt(String(t.amount)); setEditCat(t.category ?? "");
+    setEditId(t.id);
+    setEditName(t.name);
+    setEditAmt(String(t.amount));
+    setEditCat(t.category ?? "");
+    setEditDay(String(t.dayOfMonth ?? 1));
   }
 
   async function handleSaveEdit() {
     if (!editId || !editName.trim()) return;
     const a = parseFloat(editAmt);
     if (isNaN(a) || a <= 0) return;
-    await updateTemplate(editId, editName.trim(), a, editCat || undefined);
+    await updateTemplate(editId, editName.trim(), a, editCat || undefined, parseInt(editDay) || 1);
     setEditId(null);
     loadTemplates().then(setTemplates);
   }
@@ -60,11 +67,12 @@ export function TemplateManager({ onClose }: Props) {
   const fmt = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-lg overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
@@ -74,44 +82,66 @@ export function TemplateManager({ onClose }: Props) {
               {templates.length} gastos · −{fmt(total)}/mes
             </p>
           </div>
-          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 text-xl leading-none transition-colors">×</button>
+          <button
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 text-xl leading-none transition-colors"
+          >×</button>
         </div>
+
+        {/* Column headers */}
+        {templates.length > 0 && (
+          <div className="grid grid-cols-[1fr_72px_100px_72px_56px] gap-2 px-4 py-1.5 bg-neutral-50 dark:bg-neutral-800/40 border-b border-neutral-100 dark:border-neutral-800">
+            {["Nombre","Importe","Categoría","Día",""].map((h, i) => (
+              <span key={i} className="text-[10px] uppercase tracking-wider text-neutral-400 dark:text-neutral-600">{h}</span>
+            ))}
+          </div>
+        )}
 
         {/* List */}
         <div className="max-h-80 overflow-y-auto">
           {loading ? (
             <div className="py-8 text-center text-sm text-neutral-400">Cargando...</div>
           ) : templates.length === 0 && !addingNew ? (
-            <div className="py-8 text-center text-sm text-neutral-400">
-              Sin gastos en la plantilla todavía
-            </div>
+            <div className="py-8 text-center text-sm text-neutral-400">Sin gastos en la plantilla todavía</div>
           ) : null}
 
           {templates.map(t => (
             <div key={t.id}>
               {editId === t.id ? (
                 <div className="flex flex-wrap gap-2 px-4 py-2.5 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
-                  <TextInput value={editName} onChange={e => setEditName(e.target.value)} className="flex-1 min-w-[120px]" autoFocus />
-                  <TextInput type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)} className="w-24" />
+                  <TextInput value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nombre" className="flex-1 min-w-[120px]" autoFocus />
+                  <TextInput type="number" value={editAmt} onChange={e => setEditAmt(e.target.value)} placeholder="€" className="w-20" />
                   <select value={editCat} onChange={e => setEditCat(e.target.value)} className="input-base w-32">
                     <option value="">Categoría</option>
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select value={editDay} onChange={e => setEditDay(e.target.value)} className="input-base w-16" title="Día del mes">
+                    {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
                   <SaveButton onClick={handleSaveEdit} />
                   <GhostButton onClick={() => setEditId(null)}>✕</GhostButton>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0" />
-                  <span className="flex-1 text-neutral-800 dark:text-neutral-200 truncate">{t.name}</span>
-                  {t.category && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 shrink-0">
+                <div className="grid grid-cols-[1fr_72px_100px_56px_56px] gap-2 items-center px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0" />
+                    <span className="text-neutral-800 dark:text-neutral-200 truncate">{t.name}</span>
+                  </div>
+                  <span className="font-medium text-brand-amber">−{fmt(t.amount)}</span>
+                  {t.category ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 truncate">
                       {t.category}
                     </span>
+                  ) : (
+                    <span className="text-neutral-300 dark:text-neutral-600 text-xs">—</span>
                   )}
-                  <span className="font-medium text-brand-amber shrink-0">−{fmt(t.amount)}</span>
-                  <IconButton onClick={() => openEdit(t)}><PencilIcon /></IconButton>
-                  <IconButton danger onClick={() => handleDelete(t.id)}><XIcon /></IconButton>
+                  <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                    día {t.dayOfMonth ?? 1}
+                  </span>
+                  <div className="flex items-center gap-1 justify-end">
+                    <IconButton onClick={() => openEdit(t)}><PencilIcon /></IconButton>
+                    <IconButton danger onClick={() => handleDelete(t.id)}><XIcon /></IconButton>
+                  </div>
                 </div>
               )}
             </div>
@@ -127,15 +157,18 @@ export function TemplateManager({ onClose }: Props) {
               />
               <TextInput
                 type="number" value={newAmt} onChange={e => setNewAmt(e.target.value)}
-                placeholder="€/mes" className="w-24"
+                placeholder="€/mes" className="w-20"
                 onKeyDown={e => e.key === "Enter" && handleAdd()}
               />
               <select value={newCat} onChange={e => setNewCat(e.target.value)} className="input-base w-32">
                 <option value="">Categoría</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <select value={newDay} onChange={e => setNewDay(e.target.value)} className="input-base w-16" title="Día del mes">
+                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
               <SaveButton onClick={handleAdd} />
-              <GhostButton onClick={() => { setAddingNew(false); setNewName(""); setNewAmt(""); setNewCat(""); }}>✕</GhostButton>
+              <GhostButton onClick={() => { setAddingNew(false); setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); }}>✕</GhostButton>
             </div>
           ) : (
             <button
@@ -149,7 +182,7 @@ export function TemplateManager({ onClose }: Props) {
 
         {/* Footer */}
         <div className="px-5 py-3.5 border-t border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
-          <p className="text-xs text-neutral-400">Los cambios no afectan a meses anteriores</p>
+          <p className="text-xs text-neutral-400">El día indica cuándo se cobra cada mes (máx. 28)</p>
           <GhostButton onClick={onClose}>Cerrar</GhostButton>
         </div>
       </div>
