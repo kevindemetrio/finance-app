@@ -194,7 +194,7 @@ export default function HomePage() {
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
           </div>
           <div className="flex items-center gap-1">
-            <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} />
+            <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} />
             <ThemeToggle />
             <button onClick={handleLogout} title={userEmail} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
               <LogoutIcon />
@@ -261,11 +261,14 @@ export default function HomePage() {
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} />
-            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                 entries={data.incomes} storageKey="incomes"
                 onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
+
+              <Section title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
+                entries={data.savingsEntries} storageKey="savings"
+                onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
 
               <Section title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
                 entries={data.fixedExpenses} showPaid showCategory storageKey="fixed"
@@ -275,11 +278,8 @@ export default function HomePage() {
               <Section title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
                 entries={data.varExpenses} showCategory storageKey="variable"
                 onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
-
-              <Section title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
-                entries={data.savingsEntries} storageKey="savings"
-                onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
             </div>
+            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
           </>
         )}
       </div>

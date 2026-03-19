@@ -29,9 +29,10 @@ interface Props {
   data: MonthData;
   totalSavings: number;
   categoryBudgets: CategoryBudget[];
+  carryover: number;
 }
 
-export function PdfReportButton({ year, month, data, totalSavings, categoryBudgets }: Props) {
+export function PdfReportButton({ year, month, data, totalSavings, categoryBudgets, carryover }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function generatePdf() {
@@ -168,36 +169,48 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       const fix=data.fixedExpenses.reduce((a,i)=>a+i.amount,0);
       const vr=data.varExpenses.reduce((a,i)=>a+i.amount,0);
       const sav=data.savingsEntries.reduce((a,i)=>a+i.amount,0);
-      const bal=inc-fix-vr-sav;
+      const bal=inc+carryover-fix-vr-sav;
       const paidFix=data.fixedExpenses.filter(e=>e.paid).reduce((a,i)=>a+i.amount,0);
 
       title("Resumen del mes","#1D9E75");
 
       const mets=[
-        {l:"Ingresos",     v:fmtN(inc),                            c:"#1D9E75"},
-        {l:"Gastos fijos", v:fmtN(fix),                            c:"#BA7517"},
-        {l:"Variables",    v:fmtN(vr),                             c:"#E24B4A"},
-        {l:"Ahorros",      v:fmtN(sav),                            c:"#378ADD"},
+        {l:"Ingresos",     v:fmtN(inc),                             c:"#1D9E75"},
+        {l:"Gastos fijos", v:fmtN(fix),                             c:"#BA7517"},
+        {l:"Variables",    v:fmtN(vr),                              c:"#E24B4A"},
+        {l:"Ahorros",      v:fmtN(sav),                             c:"#378ADD"},
         {l:"Balance",      v:(bal>=0?"+ ":"- ")+fmtN(Math.abs(bal)),c:bal>=0?"#1D9E75":"#E24B4A"},
-        {l:"Ahorro total", v:fmtN(totalSavings),                   c:"#378ADD"},
+        {l:"Ahorro total", v:fmtN(totalSavings),                    c:"#378ADD"},
       ];
+      // Add carryover note below metrics if present
       const mw=(cW-10)/3, mh=18;
       mets.forEach((m,i)=>{
         metricBox(mg+i%3*(mw+5), y+Math.floor(i/3)*(mh+4), mw, mh, m.l, m.v, m.c);
       });
-      y+=mh*2+4+8;
+      y+=mh*2+4+6;
+      if(carryover>0){
+        sp(10);
+        setFill(doc,"#f0faf0"); doc.rect(mg,y,cW,8,"F");
+        doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#2d6a1e");
+        doc.text(`Incluye arrastre del mes anterior: +${fmtN(carryover)}`,mg+3,y+5.5);
+        y+=12;
+      } else {
+        y+=2;
+      }
 
       // Distribution bar
-      if(inc>0){
+      if(inc>0 || carryover>0){
         sp(26);
+        const totalAvailable = inc + carryover;
         doc.setFontSize(8); doc.setFont("helvetica","normal"); setTxt(doc,"#505050");
-        doc.text("Distribución del ingreso",mg,y); y+=5;
+        doc.text("Distribución del dinero disponible",mg,y); y+=5;
         pieBar([
-          {label:"Gastos fijos",amount:fix,color:"#BA7517"},
-          {label:"Variables",   amount:vr, color:"#E24B4A"},
-          {label:"Ahorros",     amount:sav,color:"#378ADD"},
+          ...(carryover>0?[{label:"Arrastre anterior",amount:carryover,color:"#4a9a28"}]:[]),
+          {label:"Gastos fijos", amount:fix, color:"#BA7517"},
+          {label:"Variables",    amount:vr,  color:"#E24B4A"},
+          {label:"Ahorros",      amount:sav, color:"#378ADD"},
           {label:"Balance libre",amount:Math.max(bal,0),color:"#1D9E75"},
-        ], inc);
+        ], totalAvailable);
       }
 
       // ════════════════════════════════════════════════════════════════════════
