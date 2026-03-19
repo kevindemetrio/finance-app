@@ -87,14 +87,23 @@ export function Section({
             </div>
 
             {entries.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-sm text-neutral-400 dark:text-neutral-500">
-                  {emptyMessage || "Sin movimientos todavía"}
-                </p>
+              <div className="px-4 py-10 text-center flex flex-col items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                  <PlusIcon />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                    {emptyMessage || `Sin ${title.toLowerCase()} este mes`}
+                  </p>
+                  <p className="text-xs text-neutral-400 dark:text-neutral-600 mt-0.5">
+                    Pulsa Añadir para registrar el primero
+                  </p>
+                </div>
                 <button onClick={() => setShowModal(true)}
-                  className="mt-2 text-xs text-brand-blue hover:underline"
+                  className="text-xs font-medium text-brand-blue border border-brand-blue
+                    rounded-lg px-4 py-1.5 hover:bg-brand-blue-light dark:hover:bg-blue-950 transition-colors"
                 >
-                  Añadir el primero
+                  + Añadir {title.toLowerCase()}
                 </button>
               </div>
             ) : (

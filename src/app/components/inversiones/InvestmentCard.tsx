@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import {
-  Contribution, Investment, CATEGORY_COLORS,
+  Contribution, Investment, InvestmentCategory, INVESTMENT_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS,
   totalContributions, addContribution, deleteContribution,
   updateContribution, deleteInvestment, updateInvestment,
 } from "../../lib/investments";
 import { fmtEur, fmtDate, todayStr } from "../../lib/data";
 import { IconButton, SaveButton, GhostButton, TextInput } from "../ui";
+import { toast, confirm as confirmDialog } from "../Toast";
 
 interface Props {
   investment: Investment;
@@ -19,6 +20,7 @@ export function InvestmentCard({ investment, onChange }: Props) {
   const [editingInv, setEditingInv] = useState(false);
   const [invName, setInvName] = useState(investment.name);
   const [invIsin, setInvIsin] = useState(investment.isin ?? "");
+  const [invCategory, setInvCategory] = useState(investment.category);
   const [addingContrib, setAddingContrib] = useState(false);
   const [contribAmount, setContribAmount] = useState("");
   const [contribDate, setContribDate] = useState(todayStr());
@@ -34,14 +36,17 @@ export function InvestmentCard({ investment, onChange }: Props) {
 
   async function handleSaveInv() {
     if (!invName.trim()) return;
-    await updateInvestment(investment.id, invName.trim(), invIsin.trim() || undefined);
+    await updateInvestment(investment.id, invName.trim(), invIsin.trim() || undefined, invCategory);
     setEditingInv(false);
+    toast("Inversión actualizada");
     onChange();
   }
 
   async function handleDelete() {
-    if (!confirm(`¿Eliminar "${investment.name}" y todas sus aportaciones?`)) return;
+    const ok = await confirmDialog({ title: `¿Eliminar "${investment.name}"?`, message: "Se eliminarán todas sus aportaciones.", danger: true });
+    if (!ok) return;
     await deleteInvestment(investment.id);
+    toast("Inversión eliminada", "info");
     onChange();
   }
 
@@ -112,8 +117,11 @@ export function InvestmentCard({ investment, onChange }: Props) {
       {/* Edit investment form */}
       {editingInv && (
         <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
-          <TextInput value={invName} onChange={e => setInvName(e.target.value)} placeholder="Nombre" className="flex-1 min-w-[140px]" />
-          <TextInput value={invIsin} onChange={e => setInvIsin(e.target.value)} placeholder="ISIN (opcional)" className="w-40 font-mono" />
+          <TextInput value={invName} onChange={e => setInvName(e.target.value)} placeholder="Nombre" className="flex-1 min-w-[140px]" autoFocus />
+          <TextInput value={invIsin} onChange={e => setInvIsin(e.target.value)} placeholder="ISIN (opcional)" className="w-36 font-mono" />
+          <select value={invCategory} onChange={e => setInvCategory(e.target.value as InvestmentCategory)} className="input-base w-36">
+            {INVESTMENT_CATEGORIES.map(cat => <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>)}
+          </select>
           <SaveButton onClick={handleSaveInv} />
           <GhostButton onClick={() => setEditingInv(false)}>✕</GhostButton>
         </div>

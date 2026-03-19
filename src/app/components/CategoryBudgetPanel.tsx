@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Category, CATEGORIES, CategoryBudget, Entry, fmtEur, saveCategoryBudget, saveMonthConfig } from "../lib/data";
 import { GhostButton, SaveButton, TextInput } from "./ui";
+import { useTheme, SEASON_CONFIG } from "./ThemeProvider";
 
 interface Props {
   year: number;
@@ -37,6 +38,9 @@ export function CategoryBudgetPanel({
   const [open, setOpen]             = useState(true);
   const [editingCat, setEditingCat] = useState<Category | "global" | null>(null);
   const [editVal, setEditVal]       = useState("");
+
+  const { theme, season } = useTheme();
+  const cfg = theme === "season" ? SEASON_CONFIG[season] : null;
 
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
@@ -94,17 +98,18 @@ export function CategoryBudgetPanel({
   const definedCount = budgets.length + (varBudget > 0 ? 1 : 0);
 
   return (
-    <div className="card mb-4 mt-4">
+    <div className="card mb-4 mt-4" style={cfg ? { background: cfg.cardBg, borderColor: cfg.cardBorder } : undefined}>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <button
         type="button" onClick={toggle}
         className="w-full flex items-center justify-between px-4 py-3.5
           hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors
           border-b border-neutral-100 dark:border-neutral-800"
+        style={cfg ? { borderColor: cfg.rowBorder } : undefined}
       >
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-brand-red" />
-          <span className="text-sm font-medium">Presupuestos</span>
+          <span className="text-sm font-medium" style={cfg ? { color: cfg.titleColor } : undefined}>Presupuestos</span>
           {definedCount > 0 && (
             <span className="text-xs text-neutral-400 dark:text-neutral-600">
               {definedCount} definido{definedCount !== 1 ? "s" : ""}

@@ -8,6 +8,8 @@ export type InvestmentCategory =
   | "fixed"       // Renta fija (bonos, depósitos)
   | "stock";      // Stocks individuales
 
+export const INVESTMENT_CATEGORIES: InvestmentCategory[] = ["emergency","variable","fixed","stock"];
+
 export const CATEGORY_LABELS: Record<InvestmentCategory, string> = {
   emergency: "Fondo de emergencia",
   variable:  "Renta variable",
@@ -109,10 +111,13 @@ export async function createInvestment(
 export async function updateInvestment(
   id: string,
   name: string,
-  isin?: string
+  isin?: string,
+  category?: InvestmentCategory
 ): Promise<void> {
   const supabase = createClient();
-  await supabase.from("investments").update({ name, isin: isin || null }).eq("id", id);
+  const patch: Record<string, unknown> = { name, isin: isin || null };
+  if (category) patch.category = category;
+  await supabase.from("investments").update(patch).eq("id", id);
 }
 
 export async function deleteInvestment(id: string): Promise<void> {

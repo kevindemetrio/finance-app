@@ -19,15 +19,17 @@ export function TemplateManager({ onClose }: Props) {
   const [addingNew, setAddingNew] = useState(false);
   const [editId, setEditId]       = useState<string | null>(null);
 
-  const [newName, setNewName] = useState("");
-  const [newAmt, setNewAmt]   = useState("");
-  const [newCat, setNewCat]   = useState("");
-  const [newDay, setNewDay]   = useState("1");
+  const [newName, setNewName]   = useState("");
+  const [newAmt, setNewAmt]     = useState("");
+  const [newCat, setNewCat]     = useState("");
+  const [newDay, setNewDay]     = useState("1");
+  const [newNotes, setNewNotes] = useState("");
 
-  const [editName, setEditName] = useState("");
-  const [editAmt, setEditAmt]   = useState("");
-  const [editCat, setEditCat]   = useState("");
-  const [editDay, setEditDay]   = useState("1");
+  const [editName, setEditName]   = useState("");
+  const [editAmt, setEditAmt]     = useState("");
+  const [editCat, setEditCat]     = useState("");
+  const [editDay, setEditDay]     = useState("1");
+  const [editNotes, setEditNotes] = useState("");
 
   useEffect(() => {
     loadTemplates().then(t => { setTemplates(t); setLoading(false); });
@@ -36,8 +38,8 @@ export function TemplateManager({ onClose }: Props) {
   async function handleAdd() {
     const a = parseFloat(newAmt);
     if (!newName.trim() || isNaN(a) || a <= 0) return;
-    await createTemplate(newName.trim(), a, newCat || undefined, parseInt(newDay) || 1);
-    setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); setAddingNew(false);
+    await createTemplate(newName.trim(), a, newCat || undefined, parseInt(newDay) || 1, newNotes.trim() || undefined);
+    setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); setNewNotes(""); setAddingNew(false);
     loadTemplates().then(setTemplates);
   }
 
@@ -47,13 +49,14 @@ export function TemplateManager({ onClose }: Props) {
     setEditAmt(String(t.amount));
     setEditCat(t.category ?? "");
     setEditDay(String(t.dayOfMonth ?? 1));
+    setEditNotes(t.notes ?? "");
   }
 
   async function handleSaveEdit() {
     if (!editId || !editName.trim()) return;
     const a = parseFloat(editAmt);
     if (isNaN(a) || a <= 0) return;
-    await updateTemplate(editId, editName.trim(), a, editCat || undefined, parseInt(editDay) || 1);
+    await updateTemplate(editId, editName.trim(), a, editCat || undefined, parseInt(editDay) || 1, editNotes.trim() || undefined);
     setEditId(null);
     loadTemplates().then(setTemplates);
   }
@@ -118,6 +121,7 @@ export function TemplateManager({ onClose }: Props) {
                   <select value={editDay} onChange={e => setEditDay(e.target.value)} className="input-base w-16" title="Día del mes">
                     {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
+                  <TextInput value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Nota (opcional)" className="flex-1 min-w-[120px]" />
                   <SaveButton onClick={handleSaveEdit} />
                   <GhostButton onClick={() => setEditId(null)}>✕</GhostButton>
                 </div>
@@ -134,6 +138,9 @@ export function TemplateManager({ onClose }: Props) {
                     </span>
                   ) : (
                     <span className="text-neutral-300 dark:text-neutral-600 text-xs">—</span>
+                  )}
+                  {t.notes && (
+                    <span className="text-xs text-neutral-400 dark:text-neutral-500 italic truncate max-w-[120px]" title={t.notes}>{t.notes}</span>
                   )}
                   <span className="text-xs text-neutral-400 dark:text-neutral-500">
                     día {t.dayOfMonth ?? 1}
@@ -167,8 +174,9 @@ export function TemplateManager({ onClose }: Props) {
               <select value={newDay} onChange={e => setNewDay(e.target.value)} className="input-base w-16" title="Día del mes">
                 {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
+              <TextInput value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Nota (opcional)" className="flex-1 min-w-[120px]" />
               <SaveButton onClick={handleAdd} />
-              <GhostButton onClick={() => { setAddingNew(false); setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); }}>✕</GhostButton>
+              <GhostButton onClick={() => { setAddingNew(false); setNewName(""); setNewAmt(""); setNewCat(""); setNewDay("1"); setNewNotes(""); }}>✕</GhostButton>
             </div>
           ) : (
             <button

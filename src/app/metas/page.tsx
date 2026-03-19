@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur } from "../lib/data";
+import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur, getAvgMonthlySavings } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
@@ -18,6 +18,7 @@ export default function MetasPage() {
   const router = useRouter();
   const [goals, setGoals]     = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [avgSavings, setAvgSavings] = useState(0);
   const [adding, setAdding]   = useState(false);
   const [editingId, setEditingId]     = useState<string | null>(null);
   const [editMode, setEditMode]       = useState<EditMode>("add_saved");
@@ -36,7 +37,10 @@ export default function MetasPage() {
 
   const reload = useCallback(() => loadGoals().then(setGoals), []);
 
-  useEffect(() => { reload().then(() => setLoading(false)); }, [reload]);
+  useEffect(() => {
+    reload().then(() => setLoading(false));
+    getAvgMonthlySavings().then(setAvgSavings);
+  }, [reload]);
 
   async function handleCreate() {
     if (!newName.trim() || !newTarget) return;
@@ -196,6 +200,18 @@ export default function MetasPage() {
                       : <span>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</span>}
                     {goal.deadline && <span>Límite: {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</span>}
                   </div>
+                  {!done && avgSavings > 0 && (() => {
+                    const remaining = goal.targetAmount - goal.savedAmount;
+                    const months = Math.ceil(remaining / avgSavings);
+                    const arrival = new Date();
+                    arrival.setMonth(arrival.getMonth() + months);
+                    const label = arrival.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+                    return (
+                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                        A este ritmo, en <span className="font-medium" style={{ color: goal.color }}>{label}</span> ({months} mes{months !== 1 ? "es" : ""})
+                      </p>
+                    );
+                  })()}
 
                   {editingId === goal.id && editMode === "add_saved" && (
                     <div className="flex gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">

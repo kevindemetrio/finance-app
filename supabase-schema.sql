@@ -146,3 +146,6 @@ create index if not exists cat_budgets_user_month on category_budgets(user_id, y
 
 -- Add day_of_month to recurring_templates (optional, 1-28)
 alter table recurring_templates add column if not exists day_of_month int default 1;
+
+-- Add notes to recurring_templates
+alter table recurring_templates add column if not exists notes text;

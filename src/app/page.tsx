@@ -190,7 +190,7 @@ export default function HomePage() {
             <MonthPicker year={year} month={month} onChange={(y,m) => { setYear(y); setMonth(m); }} />
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">
             <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} />
             <ThemeToggle />
             <button onClick={handleLogout} title={userEmail} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
@@ -251,9 +251,43 @@ export default function HomePage() {
         </div>
 
         {loading ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-2">{[...Array(6)].map((_,i)=><div key={i} className="metric-card h-16 animate-pulse bg-neutral-200 dark:bg-neutral-800 rounded-xl"/>)}</div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{[...Array(4)].map((_,i)=><div key={i} className="card h-40 animate-pulse bg-neutral-100 dark:bg-neutral-800"/>)}</div>
+          <div className="space-y-4 animate-pulse">
+            {/* Metrics skeleton — 2 cols mobile, 3 cols sm */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+              {[...Array(6)].map((_,i) => (
+                <div key={i} className="metric-card">
+                  <div className="h-2.5 w-16 bg-neutral-200 dark:bg-neutral-700 rounded mb-2" />
+                  <div className="h-5 w-24 bg-neutral-300 dark:bg-neutral-600 rounded" />
+                </div>
+              ))}
+            </div>
+            {/* Section skeletons */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[
+                { rows: 2 }, { rows: 3 }, { rows: 4 }, { rows: 3 },
+              ].map((s, i) => (
+                <div key={i} className="card overflow-hidden">
+                  {/* Section header */}
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+                      <div className="h-3.5 w-20 bg-neutral-200 dark:bg-neutral-700 rounded" />
+                    </div>
+                    <div className="h-3.5 w-16 bg-neutral-200 dark:bg-neutral-700 rounded" />
+                  </div>
+                  {/* Row skeletons */}
+                  {[...Array(s.rows)].map((_,j) => (
+                    <div key={j} className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                      <div className="flex-1 space-y-1.5">
+                        <div className={`h-3 bg-neutral-200 dark:bg-neutral-700 rounded ${j % 2 === 0 ? "w-3/4" : "w-1/2"}`} />
+                      </div>
+                      <div className="h-3 w-10 bg-neutral-200 dark:bg-neutral-700 rounded shrink-0" />
+                      <div className="h-3 w-16 bg-neutral-300 dark:bg-neutral-600 rounded shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <>

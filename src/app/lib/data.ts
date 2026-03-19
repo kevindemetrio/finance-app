@@ -207,19 +207,19 @@ export async function loadTemplates(): Promise<RecurringTemplate[]> {
   const supabase = createClient();
   const { data } = await supabase.from("recurring_templates").select("*").order("sort_order").order("created_at");
   if (!data) return [];
-  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), category: r.category ?? undefined, sortOrder: r.sort_order ?? 0, dayOfMonth: r.day_of_month ?? 1 }));
+  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), category: r.category ?? undefined, sortOrder: r.sort_order ?? 0, dayOfMonth: r.day_of_month ?? 1, notes: r.notes ?? undefined }));
 }
 
-export async function createTemplate(name: string, amount: number, category?: string, dayOfMonth = 1): Promise<void> {
+export async function createTemplate(name: string, amount: number, category?: string, dayOfMonth = 1, notes?: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("recurring_templates").insert({ user_id: user.id, name, amount, category: category || null, day_of_month: dayOfMonth });
+  await supabase.from("recurring_templates").insert({ user_id: user.id, name, amount, category: category || null, day_of_month: dayOfMonth, notes: notes || null });
 }
 
-export async function updateTemplate(id: string, name: string, amount: number, category?: string, dayOfMonth = 1): Promise<void> {
+export async function updateTemplate(id: string, name: string, amount: number, category?: string, dayOfMonth = 1, notes?: string): Promise<void> {
   const supabase = createClient();
-  await supabase.from("recurring_templates").update({ name, amount, category: category || null, day_of_month: dayOfMonth }).eq("id", id);
+  await supabase.from("recurring_templates").update({ name, amount, category: category || null, day_of_month: dayOfMonth, notes: notes || null }).eq("id", id);
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
@@ -265,4 +265,27 @@ export async function saveCategoryBudget(year: number, month: number, category: 
     return;
   }
   await supabase.from("category_budgets").upsert({ user_id: user.id, year, month, category, budget }, { onConflict: "user_id,year,month,category" });
+}
+
+// ─── Savings projection ───────────────────────────────────────────────────────
+// Returns average monthly savings amount over the last N months with data
+export async function getAvgMonthlySavings(limitMonths = 6): Promise<number> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("entries")
+    .select("amount, year, month")
+    .eq("type", "saving")
+    .order("year", { ascending: false })
+    .order("month", { ascending: false });
+  if (!data || data.length === 0) return 0;
+
+  // Group by year+month
+  const byMonth: Record<string, number> = {};
+  for (const r of data) {
+    const key = `${r.year}-${r.month}`;
+    byMonth[key] = (byMonth[key] || 0) + Number(r.amount);
+  }
+  const months = Object.values(byMonth).slice(0, limitMonths);
+  if (months.length === 0) return 0;
+  return months.reduce((a, v) => a + v, 0) / months.length;
 }
