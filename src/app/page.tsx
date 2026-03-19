@@ -269,7 +269,7 @@ export default function HomePage() {
 
               <Section title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
                 entries={data.varExpenses} showCategory storageKey="variable"
-                headerAfter={<BudgetBar budget={data.varBudget ?? 0} spent={varTotal} onSave={handleBudget} />}
+                bodyHeader={<BudgetBar budget={data.varBudget ?? 0} spent={varTotal} onSave={handleBudget} />}
                 onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
 
               <Section title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
