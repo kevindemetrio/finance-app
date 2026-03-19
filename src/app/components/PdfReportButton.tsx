@@ -55,10 +55,15 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
 
       // ── typography helpers ────────────────────────────────────────────────
       function title(t: string, colorHex="#1e3a5f") {
-        sp(12);
-        setFill(doc,colorHex); doc.rect(mg,y,2.5,7,"F");
-        doc.setFontSize(11); doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
-        doc.text(t, mg+6, y+5.5); y+=11;
+        sp(20);
+        // Subtle full-width separator line
+        setDraw(doc,"#e8e8e8"); doc.setLineWidth(0.4);
+        doc.line(mg, y, W-mg, y);
+        y+=7;
+        // Left accent bar + title
+        setFill(doc,colorHex); doc.rect(mg,y,2.5,8,"F");
+        doc.setFontSize(12); doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
+        doc.text(t, mg+7, y+6); y+=14;
       }
       function label(t: string, colorHex="#555555") {
         doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc, colorHex);
@@ -187,7 +192,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       mets.forEach((m,i)=>{
         metricBox(mg+i%3*(mw+5), y+Math.floor(i/3)*(mh+4), mw, mh, m.l, m.v, m.c);
       });
-      y+=mh*2+4+6;
+      y+=mh*2+4+14;
       if(carryover>0){
         sp(10);
         setFill(doc,"#f0faf0"); doc.rect(mg,y,cW,8,"F");
@@ -216,7 +221,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       // INGRESOS
       // ════════════════════════════════════════════════════════════════════════
-      sp(20); title("Ingresos","#1D9E75");
+      sp(28); title("Ingresos","#1D9E75");
       if(data.incomes.length>0){
         pieBar(data.incomes.map((e,i)=>({label:e.name,amount:e.amount,color:PALETTE[i%PALETTE.length]})), inc);
         sp(12);
@@ -233,7 +238,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       // AHORROS
       // ════════════════════════════════════════════════════════════════════════
-      sp(20); title("Ahorros","#378ADD");
+      sp(28); title("Ahorros","#378ADD");
       if(data.savingsEntries.length>0){
         pieBar(data.savingsEntries.map((e,i)=>({label:e.name,amount:e.amount,color:PALETTE[i%PALETTE.length]})), sav);
         sp(10);
@@ -255,7 +260,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       // GASTOS FIJOS
       // ════════════════════════════════════════════════════════════════════════
-      sp(20); title("Gastos fijos","#BA7517");
+      sp(28); title("Gastos fijos","#BA7517");
       const nP=data.fixedExpenses.filter(e=>e.paid).length;
       const nPe=data.fixedExpenses.length-nP;
       const fixPct=fix>0?Math.round((paidFix/fix)*100):0;
@@ -309,7 +314,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       // GASTOS VARIABLES
       // ════════════════════════════════════════════════════════════════════════
-      sp(20); title("Gastos variables","#E24B4A");
+      sp(28); title("Gastos variables","#E24B4A");
 
       // Global budget
       const gB=data.varBudget??0;
