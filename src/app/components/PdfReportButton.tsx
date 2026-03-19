@@ -99,8 +99,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         if(idx%2===0){ setFill(doc,"#fafafa"); doc.rect(mg,y-0.5,cW,6.5,"F"); }
         for(const c of cols){
           doc.setFontSize(7.5); doc.setFont("helvetica",c.b?"bold":"normal");
-          const [r,g,b]=c.c?hex(c.c):[40,40,40];
-          setTxt(doc, colorHex);
+          setTxt(doc, c.c || "#282828");
           doc.text(c.t,c.x,y+4.5,{align:c.a||"left"});
         }
         y+=7;
@@ -136,7 +135,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
           doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc,"#373737");
           const lbl=it.label.length>16?it.label.slice(0,15)+"…":it.label;
           doc.text(lbl,lx+7,ly+4.5);
-          doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
+          doc.setFont("helvetica","bold"); setTxt(doc, it.color || "#282828");
           doc.text(fmtN(it.amount),lx+legW-2,ly+4.5,{align:"right"});
           doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#969696");
           doc.text(`${Math.round((it.amount/total)*100)}%`,lx+legW-2,ly+9,{align:"right"});
@@ -339,8 +338,8 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
                     doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#323232");
           doc.text(cat.length>17?cat.slice(0,16)+"…":cat,mg,y+4);
           setFill(doc,"#e4e4e4"); doc.rect(mg+36,y,maxW,4.5,"F");
-          setFill(doc, colorHex); doc.rect(mg+36,y,pct*maxW,4.5,"F");
-          doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
+          setFill(doc, clr); doc.rect(mg+36,y,pct*maxW,4.5,"F");
+          doc.setFont("helvetica","bold"); setTxt(doc, clr);
           doc.text("-"+fmtN(amount),W-mg,y+4,{align:"right"});
           if(bAmt>0){
             doc.setFontSize(6.5); doc.setFont("helvetica","normal");
