@@ -289,17 +289,31 @@ export async function importTemplates(year: number, month: number): Promise<Entr
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
+
   const templates = await loadTemplates();
   if (templates.length === 0) return [];
+
+  // Get existing fixed entries for this month
+  const { data: existing } = await supabase
+    .from("entries").select("name,amount").eq("year", year).eq("month", month).eq("type", "fixed");
+  const existingNames = new Set((existing || []).map((e: { name: string }) => e.name.toLowerCase().trim()));
+
+  // Only insert templates that are not already present (by name)
+  const missing = templates.filter(t => !existingNames.has(t.name.toLowerCase().trim()));
+  if (missing.length === 0) return [];
+
   const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const rows = templates.map(t => ({
+  const rows = missing.map(t => ({
     id: uid(), user_id: user.id, type: "fixed",
     name: t.name, amount: t.amount, date: dateStr,
     paid: false, category: t.category || null, notes: null, year, month,
   }));
+
   const { data, error } = await supabase.from("entries").insert(rows).select();
   if (error || !data) return [];
-  return data.map(r => ({ id: r.id, name: r.name, amount: Number(r.amount), date: r.date, paid: false, category: r.category ?? undefined }));
+  return data.map((r: { id: string; name: string; amount: number; date: string; category?: string }) => ({
+    id: r.id, name: r.name, amount: Number(r.amount), date: r.date, paid: false, category: r.category ?? undefined,
+  }));
 }
 
 export async function hasImportedTemplates(year: number, month: number): Promise<boolean> {
