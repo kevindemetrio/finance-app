@@ -17,7 +17,7 @@ import { CategoryBadge } from "./components/EntryRow";
 import { TemplateManager } from "./components/TemplateManager";
 import { SeasonWrapper } from "./components/SeasonWrapper";
 import { CategoryBudgetPanel } from "./components/CategoryBudgetPanel";
-import { toast } from "./components/Toast";
+import { toast, confirm as confirmDialog } from "./components/Toast";
 import { PdfReportButton } from "./components/PdfReportButton";
 
 function emptyMonth(): MonthData {
@@ -117,6 +117,8 @@ export default function HomePage() {
     section: keyof Pick<MonthData,"incomes"|"fixedExpenses"|"varExpenses"|"savingsEntries">
   ) => {
     const entry = (data[section] as Entry[])[idx];
+    const ok = await confirmDialog({ title: `¿Eliminar "${entry.name}"?`, danger: true });
+    if (!ok) return;
     await deleteEntry(entry.id);
     setData(d => ({ ...d, [section]: (d[section] as Entry[]).filter((_,i) => i !== idx) }));
     if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
@@ -255,7 +257,7 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year !== today.getFullYear() || month !== today.getMonth()} />
+            <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                 entries={data.incomes} storageKey="incomes"

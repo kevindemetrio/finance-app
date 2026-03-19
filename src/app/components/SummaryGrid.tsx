@@ -32,12 +32,13 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
           <p className="text-xs text-amber-700 dark:text-amber-400">Estás viendo un mes pasado — los cambios afectarán datos históricos</p>
         </div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5 mb-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
         <MetricCard label="Ingresos" value={fmtEur(totalInc + (data.carryover ?? 0))} color="green">
           {(data.carryover ?? 0) > 0 && (
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">+{fmtEur(data.carryover ?? 0)} anterior</p>
           )}
         </MetricCard>
+        <MetricCard label="Balance" value={fmtEur(balance)} color={balance >= 0 ? "green" : "red"} />
         <MetricCard label="Gastos fijos" value={fmtEur(totalFix)} color="amber">
           <div className="flex gap-2 mt-0.5 flex-wrap">
             <span className="text-[11px] text-brand-green-dark dark:text-green-400">✓ {fmtEur(fixPaid)}</span>
@@ -49,9 +50,6 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">{varPct}% de {fmtEur(varBudget)}</p>
           )}
         </MetricCard>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-        <MetricCard label="Balance" value={fmtEur(balance)} color={balance >= 0 ? "green" : "red"} />
         <MetricCard label="Ahorros mes" value={fmtEur(savMonth)} color="blue" />
         <MetricCard label="Ahorro total" value={fmtEur(totalSavings)} color="blue" />
       </div>

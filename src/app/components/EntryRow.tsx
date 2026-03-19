@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Category, CATEGORIES, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
 import { Badge, GhostButton, IconButton, SaveButton, TextInput } from "./ui";
-import { toast, confirm } from "./Toast";
 
 interface Props {
   entry: Entry;
@@ -62,10 +61,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
     setEditing(false);
   }
 
-  async function handleDelete() {
-    const ok = await confirm({ title: `¿Eliminar "${entry.name}"?`, danger: true });
-    if (ok) { onDelete(); toast("Movimiento eliminado", "info"); }
-  }
+  function handleDelete() { onDelete(); }
 
   return (
     <div>
