@@ -55,7 +55,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const id = ++fetchId.current;
-    setLoading(true); setError(""); setImportMsg("");
+    setLoading(true); setError("");
     Promise.all([loadMonth(year, month), getCarryover(year, month), getAllTimeSavings(year, month), loadCategoryBudgets(year, month)])
       .then(([monthData, carryover, savings, catBdgs]) => {
         if (id !== fetchId.current) return;
@@ -81,7 +81,7 @@ export default function HomePage() {
   async function handleImportTemplate() {
     if (importing) return;
     setImporting(true);
-    setImportMsg("");
+   
     const newEntries = await importTemplates(year, month);
     if (newEntries.length > 0) {
       setData(d => ({ ...d, fixedExpenses: [...d.fixedExpenses, ...newEntries] }));
