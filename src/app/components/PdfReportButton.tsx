@@ -7,8 +7,21 @@ const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 const PALETTE = ["#E24B4A","#1D9E75","#378ADD","#BA7517","#7F77DD","#D85A30","#D4537E","#639922","#00838F","#888780"];
 
 function hex(h: string): [number,number,number] {
-  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+  if (!h || h.length < 7) return [80, 80, 80];
+  const r = parseInt(h.slice(1,3),16);
+  const g = parseInt(h.slice(3,5),16);
+  const b = parseInt(h.slice(5,7),16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return [80, 80, 80];
+  return [r, g, b];
 }
+
+// Safe color setters using CSS hex string — works in all jsPDF versions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setFill(d: any, h: string) { d.setFillColor(h || "#505050"); }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setDraw(d: any, h: string) { d.setDrawColor(h || "#505050"); }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function setTxt(d: any, h: string) { d.setTextColor(h || "#323232"); }
 
 interface Props {
   year: number;
@@ -35,32 +48,29 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ── page management ───────────────────────────────────────────────────
       function newPage() {
         doc.addPage(); y=mg;
-        doc.setFillColor(29,158,117); doc.rect(0,0,W,1.2,"F");
+        setFill(doc,"#1D9E75"); doc.rect(0,0,W,1.2,"F");
       }
       function sp(n: number) { if(y+n>H-mg-10) newPage(); }
 
       // ── typography helpers ────────────────────────────────────────────────
       function title(t: string, colorHex="#1e3a5f") {
         sp(12);
-        const [r,g,b]=hex(colorHex);
-        doc.setFillColor(r,g,b); doc.rect(mg,y,2.5,7,"F");
-        doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(r,g,b);
+        setFill(doc,colorHex); doc.rect(mg,y,2.5,7,"F");
+        doc.setFontSize(11); doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
         doc.text(t, mg+6, y+5.5); y+=11;
       }
       function label(t: string, colorHex="#555555") {
-        const [r,g,b]=hex(colorHex);
-        doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(r,g,b);
+        doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc, colorHex);
         doc.text(t,mg,y);
       }
 
       // ── metric box ────────────────────────────────────────────────────────
       function metricBox(bx:number,by:number,bw:number,bh:number,lbl:string,val:string,colorHex:string) {
-        const [r,g,b]=hex(colorHex);
-        doc.setFillColor(247,252,247); doc.setDrawColor(r,g,b); doc.setLineWidth(0.3);
+        setFill(doc,"#f7fcf7"); setDraw(doc, colorHex); doc.setLineWidth(0.3);
         doc.roundedRect(bx,by,bw,bh,2,2,"FD");
-        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(120,130,120);
+        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#788278");
         doc.text(lbl.toUpperCase(),bx+3,by+6);
-        doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(r,g,b);
+        doc.setFontSize(10); doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
         doc.text(val,bx+3,by+14);
       }
 
@@ -69,15 +79,14 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         sp(9);
         const maxW=cW-48;
         const pct=total>0?Math.min(spent/total,1):0;
-        const [r,g,b]=hex(colorHex);
-        doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+        doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#323232");
         doc.text(lbl.length>18?lbl.slice(0,17)+"…":lbl, mg, y+4);
-        doc.setFillColor(228,228,228); doc.rect(mg+36,y,maxW,4.5,"F");
-        if(pct>0){ doc.setFillColor(r,g,b); doc.rect(mg+36,y,pct*maxW,4.5,"F"); }
-        doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(r,g,b);
+        setFill(doc,"#e4e4e4"); doc.rect(mg+36,y,maxW,4.5,"F");
+        if(pct>0){ setFill(doc, colorHex); doc.rect(mg+36,y,pct*maxW,4.5,"F"); }
+        doc.setFontSize(7.5); doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
         doc.text(fmtN(spent),W-mg,y+4,{align:"right"});
         if(total>0){
-          doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(130,130,130);
+          doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#828282");
           doc.text(`${Math.round(pct*100)}%`,mg+36+maxW+2,y+4);
         }
         y+=9;
@@ -87,19 +96,19 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       type Col = {t:string;x:number;c?:string;b?:boolean;a?:"right"|"left"};
       function row(cols:Col[], idx:number) {
         sp(7);
-        if(idx%2===0){ doc.setFillColor(250,250,250); doc.rect(mg,y-0.5,cW,6.5,"F"); }
+        if(idx%2===0){ setFill(doc,"#fafafa"); doc.rect(mg,y-0.5,cW,6.5,"F"); }
         for(const c of cols){
           doc.setFontSize(7.5); doc.setFont("helvetica",c.b?"bold":"normal");
           const [r,g,b]=c.c?hex(c.c):[40,40,40];
-          doc.setTextColor(r,g,b);
+          setTxt(doc, colorHex);
           doc.text(c.t,c.x,y+4.5,{align:c.a||"left"});
         }
         y+=7;
       }
       function rowHeader(cols:{t:string;x:number;a?:"right"|"left"}[]) {
         sp(7);
-        doc.setFillColor(238,244,238); doc.rect(mg,y,cW,6,"F");
-        doc.setFontSize(6.5); doc.setFont("helvetica","bold"); doc.setTextColor(90,110,90);
+        setFill(doc,"#eef4ee"); doc.rect(mg,y,cW,6,"F");
+        doc.setFontSize(6.5); doc.setFont("helvetica","bold"); setTxt(doc,"#5a6e5a");
         for(const c of cols) doc.text(c.t,c.x,y+4.5,{align:c.a||"left"});
         y+=7;
       }
@@ -113,8 +122,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         for(const it of items){
           if(it.amount<=0) continue;
           const w=Math.max((it.amount/total)*cW,0.5);
-          const [r,g,b]=hex(it.color);
-          doc.setFillColor(r,g,b); doc.rect(bx,y,w,barH,"F");
+          setFill(doc,it.color); doc.rect(bx,y,w,barH,"F");
           bx+=w;
         }
         y+=barH+2;
@@ -124,14 +132,13 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
           if(it.amount<=0) return;
           const col=i%cols, row2=Math.floor(i/cols);
           const lx=mg+col*legW, ly=y+row2*8;
-          const [r,g,b]=hex(it.color);
-          doc.setFillColor(r,g,b); doc.rect(lx,ly+1,5,3.5,"F");
-          doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(55,55,55);
+          setFill(doc,it.color); doc.rect(lx,ly+1,5,3.5,"F");
+          doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc,"#373737");
           const lbl=it.label.length>16?it.label.slice(0,15)+"…":it.label;
           doc.text(lbl,lx+7,ly+4.5);
-          doc.setFont("helvetica","bold"); doc.setTextColor(r,g,b);
+          doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
           doc.text(fmtN(it.amount),lx+legW-2,ly+4.5,{align:"right"});
-          doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
+          doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#969696");
           doc.text(`${Math.round((it.amount/total)*100)}%`,lx+legW-2,ly+9,{align:"right"});
         });
         const rows=Math.ceil(items.filter(i=>i.amount>0).length/cols);
@@ -141,13 +148,13 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       // PORTADA
       // ════════════════════════════════════════════════════════════════════════
-      doc.setFillColor(29,158,117); doc.rect(0,0,W,44,"F");
+      setFill(doc,"#1D9E75"); doc.rect(0,0,W,44,"F");
       // logo box (no circle API needed)
-      doc.setFillColor(255,255,255); doc.setDrawColor(255,255,255); doc.setLineWidth(0.5);
+      setFill(doc,"#ffffff"); setDraw(doc,"#ffffff"); doc.setLineWidth(0.5);
       doc.roundedRect(mg+1,15,14,14,3,3,"S");
-      doc.setFontSize(11); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+      doc.setFontSize(11); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
       doc.text("€",mg+8,25.5,{align:"center"});
-      doc.setFontSize(21); doc.setFont("helvetica","bold"); doc.setTextColor(255,255,255);
+      doc.setFontSize(21); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
       doc.text("Finanzas",mg+21,18);
       doc.setFontSize(10); doc.setFont("helvetica","normal");
       doc.text(`Informe mensual · ${MONTH_NAMES[month]} ${year}`,mg+21,27);
@@ -184,7 +191,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // Distribution bar
       if(inc>0){
         sp(26);
-        doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+        doc.setFontSize(8); doc.setFont("helvetica","normal"); setTxt(doc,"#505050");
         doc.text("Distribución del ingreso",mg,y); y+=5;
         pieBar([
           {label:"Gastos fijos",amount:fix,color:"#BA7517"},
@@ -209,7 +216,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
             {t:"+"+fmtN(e.amount),x:W-mg-2,a:"right",c:"#1D9E75",b:true},
           ],i);
         });
-      } else { doc.setFontSize(8); doc.setTextColor(160,160,160); doc.text("Sin ingresos",mg,y+4); y+=10; }
+      } else { doc.setFontSize(8); setTxt(doc,"#a0a0a0"); doc.text("Sin ingresos",mg,y+4); y+=10; }
 
       // ════════════════════════════════════════════════════════════════════════
       // AHORROS
@@ -218,8 +225,8 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       if(data.savingsEntries.length>0){
         pieBar(data.savingsEntries.map((e,i)=>({label:e.name,amount:e.amount,color:PALETTE[i%PALETTE.length]})), sav);
         sp(10);
-        doc.setFillColor(230,243,255); doc.rect(mg,y,cW,9,"F");
-        doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(30,80,160);
+        setFill(doc,"#e6f3ff"); doc.rect(mg,y,cW,9,"F");
+        doc.setFontSize(8); doc.setFont("helvetica","normal"); setTxt(doc,"#1e50a0");
         doc.text("Total ahorrado acumulado:",mg+3,y+6);
         doc.setFont("helvetica","bold"); doc.text(fmtN(totalSavings),W-mg-3,y+6,{align:"right"});
         y+=13;
@@ -231,7 +238,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
             {t:"+"+fmtN(e.amount),x:W-mg-2,a:"right",c:"#378ADD",b:true},
           ],i);
         });
-      } else { doc.setFontSize(8); doc.setTextColor(160,160,160); doc.text("Sin ahorros",mg,y+4); y+=10; }
+      } else { doc.setFontSize(8); setTxt(doc,"#a0a0a0"); doc.text("Sin ahorros",mg,y+4); y+=10; }
 
       // ════════════════════════════════════════════════════════════════════════
       // GASTOS FIJOS
@@ -249,13 +256,13 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       ].forEach((b,i)=>{
         const bx=mg+i*(sbW+5);
         const [r,g,bv]=hex(b.c);
-        doc.setFillColor(247,252,247); doc.setDrawColor(r,g,bv); doc.setLineWidth(0.3);
+        setFill(doc,"#f7fcf7"); setDraw(doc, b.c); doc.setLineWidth(0.3);
         doc.roundedRect(bx,y,sbW,13,2,2,"FD");
-        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(110,110,110);
+        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#6e6e6e");
         doc.text(b.l.toUpperCase(),bx+3,y+5.5);
-        doc.setFontSize(10); doc.setFont("helvetica","bold"); doc.setTextColor(r,g,bv);
+        doc.setFontSize(10); doc.setFont("helvetica","bold"); setTxt(doc, b.c);
         doc.text(b.v,bx+3,y+12);
-        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(150,150,150);
+        doc.setFontSize(6.5); doc.setFont("helvetica","normal"); setTxt(doc,"#969696");
         doc.text(b.s,bx+sbW-2,y+12,{align:"right"});
       });
       y+=17;
@@ -263,9 +270,9 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // Progress bar
       if(fix>0){
         sp(9);
-        doc.setFillColor(225,225,225); doc.rect(mg,y,cW,4.5,"F");
-        doc.setFillColor(29,158,117); doc.rect(mg,y,(paidFix/fix)*cW,4.5,"F");
-        doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+        setFill(doc,"#e1e1e1"); doc.rect(mg,y,cW,4.5,"F");
+        setFill(doc,"#1D9E75"); doc.rect(mg,y,(paidFix/fix)*cW,4.5,"F");
+        doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc,"#505050");
         doc.text(`${fixPct}% cobrado`,W-mg,y+3.5,{align:"right"});
         y+=9;
       }
@@ -297,11 +304,11 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       if(gB>0){
         sp(12);
         const gOver=vr>gB, gPct=Math.round((vr/gB)*100);
-        doc.setFillColor(gOver?255:238, gOver?238:252, gOver?238:238);
-        doc.setDrawColor(gOver?180:150, gOver?0:180, gOver?0:150); doc.setLineWidth(0.3);
+        setFill(doc, gOver?"#ffeeee":"#eefcee");
+        setDraw(doc, gOver?"#b400b4":"#64c864"); doc.setLineWidth(0.3);
         doc.roundedRect(mg,y,cW,10,2,2,"FD");
         doc.setFontSize(8); doc.setFont("helvetica","normal");
-        doc.setTextColor(gOver?150:40, gOver?0:90, gOver?0:40);
+        setTxt(doc, gOver?"#960059":"#285a28");
         doc.text(
           gOver
             ? `Presupuesto superado  ${fmtN(vr)} / ${fmtN(gB)}  (+${fmtN(vr-gB)})`
@@ -318,7 +325,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
 
       if(cats.length>0){
         sp(12);
-        doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+        doc.setFontSize(8.5); doc.setFont("helvetica","bold"); setTxt(doc,"#505050");
         doc.text("Gasto por categoría",mg,y); y+=7;
 
         cats.forEach(([cat,amount],i)=>{
@@ -329,16 +336,15 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
           const clr=isOver?"#E24B4A":bAmt>0&&amount/bAmt>=0.8?"#BA7517":PALETTE[i%PALETTE.length];
           const maxW=cW-48;
           const pct=bAmt>0?Math.min(amount/bAmt,1):amount/cats[0][1];
-          const [r,g,b]=hex(clr);
-          doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(50,50,50);
+                    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#323232");
           doc.text(cat.length>17?cat.slice(0,16)+"…":cat,mg,y+4);
-          doc.setFillColor(228,228,228); doc.rect(mg+36,y,maxW,4.5,"F");
-          doc.setFillColor(r,g,b); doc.rect(mg+36,y,pct*maxW,4.5,"F");
-          doc.setFont("helvetica","bold"); doc.setTextColor(r,g,b);
+          setFill(doc,"#e4e4e4"); doc.rect(mg+36,y,maxW,4.5,"F");
+          setFill(doc, colorHex); doc.rect(mg+36,y,pct*maxW,4.5,"F");
+          doc.setFont("helvetica","bold"); setTxt(doc, colorHex);
           doc.text("-"+fmtN(amount),W-mg,y+4,{align:"right"});
           if(bAmt>0){
             doc.setFontSize(6.5); doc.setFont("helvetica","normal");
-            doc.setTextColor(isOver?160:100,isOver?0:120,isOver?0:100);
+            setTxt(doc, isOver?"#a00000":"#647864");
             doc.text(`${Math.round((amount/bAmt)*100)}% de ${fmtN(bAmt)} ${isOver?"↑":"✓"}`,mg+36+maxW+2,y+4);
           }
           y+=9;
@@ -347,7 +353,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         // Category pie bar
         sp(26);
         y+=4;
-        doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(80,80,80);
+        doc.setFontSize(8); doc.setFont("helvetica","normal"); setTxt(doc,"#505050");
         doc.text("Distribución por categoría",mg,y); y+=5;
         pieBar(cats.map(([cat,amount],i)=>({label:cat,amount,color:PALETTE[i%PALETTE.length]})), vr);
       }
@@ -355,7 +361,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // Detail table
       if(data.varExpenses.length>0){
         sp(18);
-        doc.setFontSize(8.5); doc.setFont("helvetica","bold"); doc.setTextColor(80,80,80);
+        doc.setFontSize(8.5); doc.setFont("helvetica","bold"); setTxt(doc,"#505050");
         doc.text("Detalle de movimientos",mg,y); y+=7;
         rowHeader([
           {t:"CONCEPTO",x:mg+2},{t:"CATEGORÍA",x:mg+cW*0.45},
@@ -377,8 +383,8 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       const np=(doc as any).internal.getNumberOfPages();
       for(let p=1;p<=np;p++){
         doc.setPage(p);
-        doc.setFillColor(244,249,244); doc.rect(0,H-9,W,9,"F");
-        doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(160,160,160);
+        setFill(doc,"#f4f9f4"); doc.rect(0,H-9,W,9,"F");
+        doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc,"#a0a0a0");
         doc.text(`Finanzas · ${MONTH_NAMES[month]} ${year}`,mg,H-3);
         doc.text(`${p} / ${np}`,W-mg,H-3,{align:"right"});
       }
