@@ -3,18 +3,30 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 export type Theme = "light" | "dark" | "season";
-export type Season = "spring" | "summer" | "autumn" | "winter";
+
+// Extended season — halloween & christmas are sub-seasons with their own look
+export type Season = "spring" | "summer" | "autumn" | "halloween" | "winter" | "christmas";
 
 export function getSeason(date = new Date()): Season {
-  const m = date.getMonth();
+  const m = date.getMonth(); // 0-11
   const d = date.getDate();
-  if (m === 2 && d >= 20 || m === 3 || m === 4 || m === 5 && d < 21) return "spring";
-  if (m === 5 && d >= 21 || m === 6 || m === 7 || m === 8 && d < 22) return "summer";
-  if (m === 8 && d >= 22 || m === 9 || m === 10 || m === 11 && d < 21) return "autumn";
+
+  // Spring: Mar 20 – Jun 20
+  if ((m === 2 && d >= 20) || m === 3 || m === 4 || (m === 5 && d < 21)) return "spring";
+  // Summer: Jun 21 – Sep 21
+  if ((m === 5 && d >= 21) || m === 6 || m === 7 || (m === 8 && d < 22)) return "summer";
+
+  // Autumn with Halloween: Oct 1 – Nov 7
+  if (m === 9 || (m === 10 && d <= 7)) return "halloween";
+  // Standard autumn: Sep 22 – Sep 30 and Nov 8 – Nov 30
+  if ((m === 8 && d >= 22) || (m === 10 && d > 7)) return "autumn";
+
+  // Christmas: Dec 1 – Jan 7
+  if (m === 11 || (m === 0 && d <= 7)) return "christmas";
+  // Standard winter: Jan 8 – Mar 19
   return "winter";
 }
 
-// Season configs — card/UI colours that overlay the background
 export const SEASON_CONFIG: Record<Season, {
   bg: string; cardBg: string; cardBorder: string;
   metricBg: string; titleColor: string; accentColor: string;
@@ -35,21 +47,42 @@ export const SEASON_CONFIG: Record<Season, {
     rowBorder: "rgba(0,100,120,0.08)", label: "Verano",
     navBg: "rgba(225,248,252,0.92)", navBorder: "rgba(0,150,170,0.2)",
   },
+  // Standard autumn: warm orange tones, light background
   autumn: {
+    bg: "#fff7ed",
+    cardBg: "rgba(255,255,255,0.86)", cardBorder: "rgba(150,70,0,0.12)",
+    metricBg: "rgba(255,255,255,0.78)", titleColor: "#7c2d12", accentColor: "#ea580c",
+    rowBorder: "rgba(150,70,0,0.08)", label: "Otoño",
+    navBg: "rgba(255,247,237,0.92)", navBorder: "rgba(180,80,0,0.2)",
+  },
+  // Halloween: dark spooky
+  halloween: {
     bg: "#1a0a00",
     cardBg: "rgba(30,12,0,0.82)", cardBorder: "rgba(255,150,0,0.18)",
     metricBg: "rgba(25,10,0,0.75)", titleColor: "#ffcc80", accentColor: "#ff8f00",
-    rowBorder: "rgba(255,150,0,0.12)", label: "Otoño",
+    rowBorder: "rgba(255,150,0,0.12)", label: "Halloween",
     navBg: "rgba(20,8,0,0.92)", navBorder: "rgba(200,100,0,0.3)",
   },
+  // Standard winter: cold blue tones, light background
   winter: {
+    bg: "#eff6ff",
+    cardBg: "rgba(255,255,255,0.88)", cardBorder: "rgba(30,60,120,0.12)",
+    metricBg: "rgba(255,255,255,0.80)", titleColor: "#1e3a5f", accentColor: "#3b82f6",
+    rowBorder: "rgba(30,60,120,0.08)", label: "Invierno",
+    navBg: "rgba(239,246,255,0.92)", navBorder: "rgba(60,120,220,0.2)",
+  },
+  // Christmas: dark festive
+  christmas: {
     bg: "#050e1f",
     cardBg: "rgba(10,22,45,0.85)", cardBorder: "rgba(100,181,246,0.18)",
     metricBg: "rgba(8,18,38,0.80)", titleColor: "#e3f2fd", accentColor: "#64b5f6",
-    rowBorder: "rgba(100,181,246,0.12)", label: "Invierno",
+    rowBorder: "rgba(100,181,246,0.12)", label: "Navidad",
     navBg: "rgba(5,12,28,0.92)", navBorder: "rgba(80,150,220,0.25)",
   },
 };
+
+// Dark seasons (need dark class on html)
+const DARK_SEASONS: Season[] = ["halloween", "christmas"];
 
 interface ThemeContextValue { theme: Theme; season: Season; toggle: () => void; }
 const ThemeContext = createContext<ThemeContextValue>({ theme: "light", season: "spring", toggle: () => {} });
@@ -68,7 +101,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function apply(t: Theme, s: Season) {
     const root = document.documentElement;
-    root.classList.toggle("dark", t === "dark" || t === "season" && (s === "autumn" || s === "winter"));
+    const isDark = t === "dark" || (t === "season" && DARK_SEASONS.includes(s));
+    root.classList.toggle("dark", isDark);
+
     if (t === "season") {
       const cfg = SEASON_CONFIG[s];
       root.style.setProperty("--season-bg", cfg.bg);
@@ -104,7 +139,10 @@ export function useTheme() { return useContext(ThemeContext); }
 
 export function ThemeToggle() {
   const { theme, season, toggle } = useTheme();
-  const label = theme === "light" ? "Cambiar a oscuro" : theme === "dark" ? "Cambiar a temporada" : "Cambiar a claro";
+  const label =
+    theme === "light" ? "Cambiar a oscuro" :
+    theme === "dark"  ? "Cambiar a temporada" : "Cambiar a claro";
+
   return (
     <button onClick={toggle}
       className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors
@@ -127,8 +165,11 @@ function MoonIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
 }
 function SeasonIcon({ season }: { season: Season }) {
-  if (season === "spring") return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22V12"/><path d="M12 12C12 7 8 3 3 3c0 5 4 9 9 9z"/><path d="M12 12c0-5 4-9 9-9-1 5-5 9-9 9z"/></svg>;
-  if (season === "summer") return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>;
-  if (season === "autumn") return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>;
+  if (season === "spring")    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22V12"/><path d="M12 12C12 7 8 3 3 3c0 5 4 9 9 9z"/><path d="M12 12c0-5 4-9 9-9-1 5-5 9-9 9z"/></svg>;
+  if (season === "summer")    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>;
+  if (season === "halloween") return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>;
+  if (season === "autumn")    return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>;
+  if (season === "christmas") return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+  // winter
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 7l-5 5-5-5"/><path d="M17 17l-5-5-5 5"/><path d="M2 12h20"/><path d="M7 7l-5 5 5 5"/><path d="M17 7l5 5-5 5"/></svg>;
 }

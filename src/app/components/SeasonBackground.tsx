@@ -257,9 +257,89 @@ const WINTER_SVG = `
   <rect x="84.5%" y="90%" width="1.5%" height="5%" fill="#e91e63"/>
 `;
 
-const SCENE_SVG: Record<Season, string> = { spring: SPRING_SVG, summer: SUMMER_SVG, autumn: AUTUMN_SVG, winter: WINTER_SVG };
+// Light autumn — orange trees, warm sky
+const AUTUMN_LIGHT_SVG = `
+  <rect width="100%" height="100%" fill="#fff7ed"/>
+  <rect width="100%" height="65%" fill="#fed7aa" opacity="0.22"/>
+  <circle cx="85%" cy="26%" r="9%" fill="#fb923c" opacity="0.45"/>
+  <ellipse cx="12%" cy="18%" rx="14%" ry="5%" fill="white" opacity="0.55"/>
+  <ellipse cx="32%" cy="12%" rx="11%" ry="4%" fill="white" opacity="0.5"/>
+  <ellipse cx="60%" cy="14%" rx="13%" ry="4.5%" fill="white" opacity="0.45"/>
+  <rect y="75%" width="100%" height="25%" fill="#92400e" opacity="0.3"/>
+  <ellipse cx="10%" cy="75%" rx="15%" ry="5%" fill="#d97706" opacity="0.5"/>
+  <ellipse cx="38%" cy="75%" rx="18%" ry="4.5%" fill="#ea580c" opacity="0.45"/>
+  <ellipse cx="72%" cy="75%" rx="20%" ry="5.5%" fill="#c2440a" opacity="0.4"/>
+  <rect x="4%" y="55%" width="1.8%" height="20%" fill="#44190a"/>
+  <ellipse cx="4.9%" cy="52%" rx="5.5%" ry="4.5%" fill="#c2440a"/>
+  <ellipse cx="4.9%" cy="50%" rx="4%" ry="3%" fill="#ea580c"/>
+  <rect x="16%" y="58%" width="1.5%" height="17%" fill="#44190a"/>
+  <ellipse cx="16.75%" cy="55%" rx="4.5%" ry="3.8%" fill="#d97706"/>
+  <ellipse cx="16.75%" cy="53%" rx="3.2%" ry="2.5%" fill="#f97316"/>
+  <rect x="28%" y="52%" width="2%" height="23%" fill="#44190a"/>
+  <ellipse cx="29%" cy="49%" rx="6%" ry="5%" fill="#b45309"/>
+  <ellipse cx="29%" cy="47%" rx="4.5%" ry="3.5%" fill="#d97706"/>
+  <rect x="46%" y="56%" width="1.8%" height="19%" fill="#44190a"/>
+  <ellipse cx="46.9%" cy="53%" rx="5%" ry="4%" fill="#ea580c"/>
+  <ellipse cx="46.9%" cy="51%" rx="3.5%" ry="2.8%" fill="#f97316"/>
+  <rect x="61%" y="54%" width="2%" height="21%" fill="#44190a"/>
+  <ellipse cx="62%" cy="51%" rx="6%" ry="4.8%" fill="#c2440a"/>
+  <ellipse cx="62%" cy="49%" rx="4.2%" ry="3.2%" fill="#d97706"/>
+  <rect x="77%" y="57%" width="1.8%" height="18%" fill="#44190a"/>
+  <ellipse cx="77.9%" cy="54%" rx="4.8%" ry="3.8%" fill="#b45309"/>
+  <ellipse cx="77.9%" cy="52%" rx="3.3%" ry="2.5%" fill="#ea580c"/>
+  <rect x="90%" y="55%" width="1.5%" height="20%" fill="#44190a"/>
+  <ellipse cx="90.75%" cy="52%" rx="5%" ry="4%" fill="#d97706"/>
+  <ellipse cx="90.75%" cy="50%" rx="3.5%" ry="2.8%" fill="#f97316"/>
+`;
+
+// Light winter — daytime snowy landscape, no moon/stars
+const WINTER_LIGHT_SVG = `
+  <rect width="100%" height="100%" fill="#eff6ff"/>
+  <rect width="100%" height="55%" fill="#dbeafe" opacity="0.5"/>
+  <circle cx="82%" cy="14%" r="8%" fill="#fff9c4" opacity="0.9"/>
+  <circle cx="82%" cy="14%" r="6%" fill="#fff176" opacity="0.8"/>
+  <ellipse cx="15%" cy="18%" rx="14%" ry="5%" fill="white" opacity="0.7"/>
+  <ellipse cx="35%" cy="12%" rx="12%" ry="4.5%" fill="white" opacity="0.65"/>
+  <ellipse cx="55%" cy="20%" rx="10%" ry="4%" fill="white" opacity="0.6"/>
+  <rect y="75%" width="100%" height="25%" fill="#bfdbfe"/>
+  <rect y="75%" width="100%" height="5%" fill="white" opacity="0.8"/>
+  <ellipse cx="10%" cy="75%" rx="18%" ry="5%" fill="white" opacity="0.8"/>
+  <ellipse cx="50%" cy="74%" rx="25%" ry="6%" fill="white" opacity="0.85"/>
+  <ellipse cx="88%" cy="75%" rx="20%" ry="5%" fill="white" opacity="0.8"/>
+  <polygon points="7%,75% 14%,53% 21%,75%" fill="#1b5e20"/>
+  <polygon points="8%,68% 14%,48% 20%,68%" fill="#2e7d32"/>
+  <polygon points="9%,61% 14%,44% 19%,61%" fill="#388e3c"/>
+  <rect x="13%" y="75%" width="2%" height="5%" fill="#5d4037"/>
+  <polygon points="6%,77% 22%,77% 14%,52%" fill="white" opacity="0.5"/>
+  <polygon points="7%,70% 21%,70% 14%,47%" fill="white" opacity="0.4"/>
+  <polygon points="79%,75% 86%,53% 93%,75%" fill="#1b5e20"/>
+  <polygon points="80%,68% 86%,48% 92%,68%" fill="#2e7d32"/>
+  <polygon points="81%,61% 86%,44% 91%,61%" fill="#388e3c"/>
+  <rect x="85%" y="75%" width="2%" height="5%" fill="#5d4037"/>
+  <polygon points="78%,77% 94%,77% 86%,52%" fill="white" opacity="0.5"/>
+  <polygon points="79%,70% 93%,70% 86%,47%" fill="white" opacity="0.4"/>
+  <polygon points="38%,75% 47%,50% 56%,75%" fill="#1b5e20"/>
+  <polygon points="39%,66% 47%,44% 55%,66%" fill="#2e7d32"/>
+  <polygon points="40.5%,58% 47%,38% 53.5%,58%" fill="#388e3c"/>
+  <polygon points="42%,48% 47%,30% 52%,48%" fill="#43a047"/>
+  <rect x="45.5%" y="75%" width="3%" height="6%" fill="#5d4037"/>
+  <polygon points="37%,77% 57%,77% 47%,49%" fill="white" opacity="0.45"/>
+  <polygon points="38.5%,68% 55.5%,68% 47%,43%" fill="white" opacity="0.38"/>
+`;
+
+const SCENE_SVG: Record<Season, string> = {
+  spring: SPRING_SVG,
+  summer: SUMMER_SVG,
+  autumn: AUTUMN_LIGHT_SVG,
+  halloween: AUTUMN_SVG,
+  winter: WINTER_LIGHT_SVG,
+  christmas: WINTER_SVG,
+};
 
 function makeParticle(season: Season): string {
+  // Map sub-seasons to their particle style
+  if (season === "halloween") season = "autumn" as Season;
+  if (season === "christmas") season = "winter" as Season;
   const r = Math.random;
   if (season === "spring") {
     const types = [
@@ -282,10 +362,12 @@ function makeParticle(season: Season): string {
 }
 
 const PARTICLE_CONFIG: Record<Season, { max: number; interval: number; duration: [number, number] }> = {
-  spring: { max: 10, interval: 500, duration: [4, 8] },
-  summer: { max: 6,  interval: 800, duration: [5, 9] },
-  autumn: { max: 14, interval: 300, duration: [3.5, 7] },
-  winter: { max: 20, interval: 220, duration: [4, 8] },
+  spring:    { max: 10, interval: 500, duration: [4, 8] },
+  summer:    { max: 6,  interval: 800, duration: [5, 9] },
+  autumn:    { max: 12, interval: 350, duration: [3.5, 7] },
+  halloween: { max: 16, interval: 280, duration: [3.5, 7] },
+  winter:    { max: 14, interval: 300, duration: [4, 8] },
+  christmas: { max: 22, interval: 200, duration: [4, 8] },
 };
 
 export function SeasonBackground({ season }: Props) {

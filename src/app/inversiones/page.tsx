@@ -9,7 +9,7 @@ import {
 import { fmtEur } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
 import { CategorySection } from "../components/inversiones/CategorySection";
-import { ThemeToggle } from "../components/ThemeProvider";
+import { ThemeToggle, useTheme, SEASON_CONFIG } from "../components/ThemeProvider";
 import { DesktopTabs, Navbar } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 
@@ -45,6 +45,10 @@ export default function InversionesPage() {
     router.push("/auth/login");
     router.refresh();
   }
+
+  const { theme, season } = useTheme();
+  const isSeason = theme === "season";
+  const seasonCfg = isSeason ? SEASON_CONFIG[season] : null;
 
   const grouped = groupByCategory(investments);
   const grandTotal = investments.reduce((a, inv) => a + totalContributions(inv), 0);
@@ -95,10 +99,12 @@ export default function InversionesPage() {
         </div>
 
         {/* Grand total */}
-        <div className="flex items-center justify-between px-4 py-3 mb-5
-          bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">Total invertido</span>
-          <span className="text-lg font-medium text-neutral-900 dark:text-neutral-100">{fmtEur(grandTotal)}</span>
+        <div
+          className="card flex items-center justify-between px-4 py-3 mb-5"
+          style={seasonCfg ? { background: seasonCfg.metricBg, borderColor: seasonCfg.cardBorder } : undefined}
+        >
+          <span className="text-sm" style={{ color: seasonCfg ? seasonCfg.titleColor : undefined }}>Total invertido</span>
+          <span className="text-lg font-medium" style={{ color: seasonCfg ? seasonCfg.accentColor : undefined }}>{fmtEur(grandTotal)}</span>
         </div>
 
         {/* Error */}
