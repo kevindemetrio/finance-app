@@ -10,7 +10,6 @@ import {
 import { createClient } from "./lib/supabase/client";
 import { SummaryGrid } from "./components/SummaryGrid";
 import { Section } from "./components/Section";
-import { BudgetBar } from "./components/BudgetBar";
 import { MonthPicker } from "./components/MonthPicker";
 import { ThemeToggle, useTheme, SEASON_CONFIG } from "./components/ThemeProvider";
 import { Navbar, DesktopTabs } from "./components/Navbar";
@@ -262,7 +261,7 @@ export default function HomePage() {
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} />
-            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} onChange={setCatBudgets} />
+            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                 entries={data.incomes} storageKey="incomes"
@@ -275,7 +274,6 @@ export default function HomePage() {
 
               <Section title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
                 entries={data.varExpenses} showCategory storageKey="variable"
-                bodyHeader={<BudgetBar budget={data.varBudget ?? 0} spent={varTotal} onSave={handleBudget} />}
                 onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
 
               <Section title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
