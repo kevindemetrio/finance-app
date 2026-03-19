@@ -112,12 +112,6 @@ export function CategoryBudgetPanel({
           )}
         </div>
         <div className="flex items-center gap-3">
-          {/* Mini summary pills when collapsed */}
-          {!open && varBudget > 0 && (
-            <span className={`text-xs font-medium ${globalOver ? "text-brand-red" : globalWarn ? "text-brand-amber" : "text-brand-green"}`}>
-              {globalPct}% · {fmtEur(varTotal)} / {fmtEur(varBudget)}
-            </span>
-          )}
           <svg
             className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
