@@ -94,7 +94,7 @@ export function CategoryBudgetPanel({
   const definedCount = budgets.length + (varBudget > 0 ? 1 : 0);
 
   return (
-    <div className="card mb-4">
+    <div className="card mb-4 mt-4">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <button
         type="button" onClick={toggle}
