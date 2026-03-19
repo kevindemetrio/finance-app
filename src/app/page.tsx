@@ -12,7 +12,7 @@ import { SummaryGrid } from "./components/SummaryGrid";
 import { Section } from "./components/Section";
 import { BudgetBar } from "./components/BudgetBar";
 import { MonthPicker } from "./components/MonthPicker";
-import { ThemeToggle } from "./components/ThemeProvider";
+import { ThemeToggle, useTheme, SEASON_CONFIG } from "./components/ThemeProvider";
 import { Navbar, DesktopTabs } from "./components/Navbar";
 import { CategoryBadge } from "./components/EntryRow";
 import { TemplateManager } from "./components/TemplateManager";
@@ -26,6 +26,8 @@ const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','A
 
 export default function HomePage() {
   const router = useRouter();
+  const { theme, season } = useTheme();
+  const isSeason = theme === "season";
   const today = new Date();
   const [year, setYear]              = useState(today.getFullYear());
   const [month, setMonth]            = useState(today.getMonth());
@@ -200,15 +202,33 @@ export default function HomePage() {
 
         {/* Search */}
         <div className="relative mb-4">
-          <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5">
+          <div
+            className={`flex items-center gap-2 rounded-xl px-3 py-2.5 border transition-colors ${!isSeason ? "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800" : ""}`}
+            style={isSeason ? {
+              background: SEASON_CONFIG[season].metricBg,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              borderColor: SEASON_CONFIG[season].cardBorder,
+            } : undefined}
+          >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-400 shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar movimientos o categorías..."
+              style={isSeason ? { color: SEASON_CONFIG[season].titleColor } : undefined}
               className="flex-1 text-sm bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400" />
             {search && <button onClick={() => { setSearch(""); setSearchResults([]); }} className="text-neutral-400 hover:text-neutral-600 text-lg leading-none">×</button>}
           </div>
           {search && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden z-20 shadow-lg">
+            <div
+              className={`absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 ${!isSeason ? "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-lg" : ""}`}
+              style={isSeason ? {
+                background: SEASON_CONFIG[season].cardBg,
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                border: `0.5px solid ${SEASON_CONFIG[season].cardBorder}`,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              } : undefined}
+            >
               {searching ? (
                 <p className="px-4 py-3 text-sm text-neutral-400">Buscando...</p>
               ) : searchResults.length === 0 ? (
