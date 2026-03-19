@@ -13,7 +13,7 @@ interface Props {
   entries: Entry[];
   showPaid?: boolean;
   showCategory?: boolean;
-  addPlaceholder?: string;
+  emptyMessage?: string;
   headerAfter?: React.ReactNode;
   bodyHeader?: React.ReactNode;
   storageKey: string;
@@ -24,10 +24,10 @@ interface Props {
 
 export function Section({
   title, dotColor, totalColor, sign, entries, showPaid, showCategory,
-  addPlaceholder, headerAfter, bodyHeader, storageKey, onAdd, onUpdate, onDelete,
+  emptyMessage, headerAfter, bodyHeader, storageKey, onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
-  const [open, setOpen] = useState(true);
+  const [open, setOpen]         = useState(true);
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
@@ -48,19 +48,16 @@ export function Section({
     <>
       {showModal && (
         <AddEntryModal
-          title={title}
-          showCategory={showCategory}
-          showPaid={showPaid}
-          onAdd={onAdd}
-          onClose={() => setShowModal(false)}
+          title={title} showCategory={showCategory} showPaid={showPaid}
+          onAdd={onAdd} onClose={() => setShowModal(false)}
         />
       )}
 
       <div className="card">
-        {/* Collapsible header */}
-        <button
-          type="button" onClick={toggle}
-          className="w-full flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+        <button type="button" onClick={toggle}
+          className="w-full flex items-center justify-between px-4 py-3.5
+            border-b border-neutral-100 dark:border-neutral-800
+            hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${dotColor}`} />
@@ -69,39 +66,43 @@ export function Section({
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${totalColor}`}>{sign}{fmtEur(total)}</span>
-            <svg className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <svg className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
         </button>
 
         {open && (
           <>
             {headerAfter}
-
-            {/* Action bar: add button + optional extra actions (e.g. template) */}
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
-              <button
-                onClick={() => setShowModal(true)}
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
+              <button onClick={() => setShowModal(true)}
                 className="flex items-center gap-1.5 text-sm text-brand-blue border border-brand-blue
                   rounded-lg px-3 py-1.5 hover:bg-brand-blue-light dark:hover:bg-blue-950 transition-colors"
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Añadir
+                <PlusIcon /> Añadir
               </button>
               {bodyHeader}
             </div>
 
-            {/* Entry list */}
             {entries.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-neutral-400 dark:text-neutral-600">
-                Sin movimientos — pulsa Añadir para empezar
+              <div className="px-4 py-8 text-center">
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">
+                  {emptyMessage || "Sin movimientos todavía"}
+                </p>
+                <button onClick={() => setShowModal(true)}
+                  className="mt-2 text-xs text-brand-blue hover:underline"
+                >
+                  Añadir el primero
+                </button>
               </div>
             ) : (
               [...entries]
                 .map((entry, idx) => ({ entry, idx }))
                 .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
                 .map(({ entry, idx }) => (
-                  <EntryRow
-                    key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
+                  <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
                     showPaid={showPaid} showCategory={showCategory}
                     onUpdate={updated => onUpdate(idx, updated)}
                     onDelete={() => onDelete(idx)}
@@ -113,4 +114,8 @@ export function Section({
       </div>
     </>
   );
+}
+
+function PlusIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 }

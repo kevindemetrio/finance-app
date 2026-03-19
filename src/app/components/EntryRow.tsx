@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Category, CATEGORIES, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
 import { Badge, GhostButton, IconButton, SaveButton, TextInput } from "./ui";
+import { toast, confirm } from "./Toast";
 
 interface Props {
   entry: Entry;
@@ -31,7 +32,7 @@ const CAT_COLORS: Record<string, { bg: string; text: string }> = {
 export function CategoryBadge({ cat }: { cat: string }) {
   const c = CAT_COLORS[cat] || { bg: "#F1EFE8", text: "#5F5E5A" };
   return (
-    <span style={{ background: c.bg, color: c.text }} className="text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
+    <span style={{ background: c.bg, color: c.text }} className="text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0">
       {cat}
     </span>
   );
@@ -49,13 +50,9 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
   function handleSave() {
     const a = parseFloat(amount);
     if (!name.trim() || isNaN(a) || a <= 0) return;
-    onUpdate({
-      ...entry,
-      name: name.trim(), amount: a, date, paid,
-      category: category as Category || undefined,
-      notes: notes.trim() || undefined,
-    });
+    onUpdate({ ...entry, name: name.trim(), amount: a, date, paid, category: category as Category || undefined, notes: notes.trim() || undefined });
     setEditing(false);
+    toast("Movimiento actualizado");
   }
 
   function handleCancel() {
@@ -65,29 +62,30 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
     setEditing(false);
   }
 
+  async function handleDelete() {
+    const ok = await confirm({ title: `¿Eliminar "${entry.name}"?`, danger: true });
+    if (ok) { onDelete(); toast("Movimiento eliminado", "info"); }
+  }
+
   return (
     <div>
-      {/* Main row */}
       <div className="flex items-center gap-2 px-4 py-2.5 text-sm border-b border-neutral-100 dark:border-neutral-800 last:border-0">
         <div className="flex-1 min-w-0">
-          <p className="text-neutral-800 dark:text-neutral-200 truncate">{entry.name}</p>
+          <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>
           {entry.notes && (
-            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5">{entry.notes}</p>
+            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-snug mt-0.5 italic">{entry.notes}</p>
           )}
         </div>
-        <span className="text-[12px] text-neutral-400 dark:text-neutral-500 w-10 shrink-0">{fmtDate(entry.date)}</span>
+        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 shrink-0 w-10">{fmtDate(entry.date)}</span>
         {showCategory && entry.category && <CategoryBadge cat={entry.category} />}
         {showPaid && (
           <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
         )}
-        <span className={`font-medium text-right w-24 shrink-0 ${colorClass}`}>
-          {sign}{fmtEur(entry.amount)}
-        </span>
+        <span className={`font-medium text-right w-24 shrink-0 ${colorClass}`}>{sign}{fmtEur(entry.amount)}</span>
         <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-        <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
+        <IconButton danger onClick={handleDelete} title="Eliminar"><XIcon /></IconButton>
       </div>
 
-      {/* Inline edit form */}
       {editing && (
         <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
           <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Descripción" className="flex-1 min-w-[120px]" />
@@ -105,12 +103,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
               <option value="1">Cobrado</option>
             </select>
           )}
-          {/* Notes field — full width row */}
-          <TextInput
-            value={notes} onChange={e => setNotes(e.target.value)}
-            placeholder="Nota (opcional) — ej: cena cumpleaños de Marina"
-            className="w-full"
-          />
+          <TextInput value={notes} onChange={e => setNotes(e.target.value)} placeholder="Nota (opcional)..." className="w-full" />
           <SaveButton onClick={handleSave} />
           <GhostButton onClick={handleCancel}>✕</GhostButton>
         </div>

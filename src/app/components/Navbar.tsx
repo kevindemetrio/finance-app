@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Dashboard is hidden for now — code kept at /dashboard for future use
 const links = [
   {
     href: "/",

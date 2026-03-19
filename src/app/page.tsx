@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Entry, MonthData, getAllTimeSavings, getCarryover,
+  Entry, MonthData, CategoryBudget, getAllTimeSavings, getCarryover,
   loadMonth, saveEntry, deleteEntry, saveMonthConfig,
-  searchEntries, importTemplates, uid,
+  searchEntries, importTemplates, loadCategoryBudgets, uid,
 } from "./lib/data";
 import { createClient } from "./lib/supabase/client";
 import { SummaryGrid } from "./components/SummaryGrid";
@@ -17,8 +17,8 @@ import { CategoryBadge } from "./components/EntryRow";
 import { TemplateManager } from "./components/TemplateManager";
 import { SeasonWrapper } from "./components/SeasonWrapper";
 import { CategoryBudgetPanel } from "./components/CategoryBudgetPanel";
+import { toast } from "./components/Toast";
 import { PdfReportButton } from "./components/PdfReportButton";
-import { CategoryBudget, loadCategoryBudgets } from "./lib/data";
 
 function emptyMonth(): MonthData {
   return { incomes:[], fixedExpenses:[], varExpenses:[], savingsEntries:[], varBudget:0, carryover:0 };
@@ -44,7 +44,6 @@ export default function HomePage() {
   const [searching, setSearching]    = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
   const [importing, setImporting]    = useState(false);
-  const [importMsg, setImportMsg]    = useState("");
   const fetchId = useRef(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -86,12 +85,11 @@ export default function HomePage() {
     const newEntries = await importTemplates(year, month);
     if (newEntries.length > 0) {
       setData(d => ({ ...d, fixedExpenses: [...d.fixedExpenses, ...newEntries] }));
-      setImportMsg(`+${newEntries.length} importados`);
+      toast(`+${newEntries.length} importados`);
     } else {
-      setImportMsg("Ya están todos");
+      toast("Ya están todos", "info");
     }
     setImporting(false);
-    setTimeout(() => setImportMsg(""), 3000);
   }
 
   const addEntryToSection = useCallback(async (
@@ -102,6 +100,7 @@ export default function HomePage() {
     await saveEntry(newEntry, type, year, month);
     setData(d => ({ ...d, [section]: [...d[section], newEntry] }));
     if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
+    toast("Movimiento añadido");
   }, [year, month]);
 
   const updateEntryInSection = useCallback(async (
@@ -121,6 +120,7 @@ export default function HomePage() {
     await deleteEntry(entry.id);
     setData(d => ({ ...d, [section]: (d[section] as Entry[]).filter((_,i) => i !== idx) }));
     if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
+    toast("Movimiento eliminado", "info");
   }, [data, year, month]);
 
   const addIncome    = (e: Entry) => addEntryToSection(e, "income", "incomes");
@@ -170,11 +170,6 @@ export default function HomePage() {
         <ImportIcon />
         {importing ? "..." : "Importar plantilla"}
       </button>
-      {importMsg && (
-        <span className={`text-xs font-medium ${importMsg.startsWith("+") ? "text-brand-green" : "text-neutral-400"}`}>
-          {importMsg}
-        </span>
-      )}
     </>
   );
 
@@ -260,7 +255,7 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            <SummaryGrid data={data} totalSavings={totalSavings} />
+            <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year !== today.getFullYear() || month !== today.getMonth()} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                 entries={data.incomes} storageKey="incomes"
