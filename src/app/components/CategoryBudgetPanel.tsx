@@ -111,8 +111,8 @@ export function CategoryBudgetPanel({
           <span className="w-2 h-2 rounded-full bg-brand-red" />
           <span className="text-sm font-medium" style={cfg ? { color: cfg.titleColor } : undefined}>Presupuestos</span>
           {definedCount > 0 && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-600">
-              {definedCount} definido{definedCount !== 1 ? "s" : ""}
+            <span className="text-xs font-medium text-neutral-400 dark:text-neutral-600 tabular-nums">
+              {definedCount}
             </span>
           )}
         </div>
