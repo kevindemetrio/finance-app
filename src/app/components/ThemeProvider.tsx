@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type Theme = "light" | "dark" | "season";
 
@@ -84,8 +84,8 @@ export const SEASON_CONFIG: Record<Season, {
 // Dark seasons (need dark class on html)
 const DARK_SEASONS: Season[] = ["halloween", "christmas"];
 
-interface ThemeContextValue { theme: Theme; season: Season; toggle: () => void; forceSeason: (s: Season) => void; }
-const ThemeContext = createContext<ThemeContextValue>({ theme: "light", season: "spring", toggle: () => {}, forceSeason: () => {} });
+interface ThemeContextValue { theme: Theme; season: Season; toggle: () => void; }
+const ThemeContext = createContext<ThemeContextValue>({ theme: "light", season: "spring", toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
@@ -124,8 +124,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   function toggle() {
-    setForcedSeasonState(null);
-    localStorage.removeItem("forcedSeason");
     setTheme(prev => {
       const next: Theme = prev === "light" ? "dark" : prev === "dark" ? "season" : "light";
       localStorage.setItem("theme", next);
@@ -134,101 +132,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // Read forced season from localStorage/DOM on mount
-  const [forcedSeason, setForcedSeasonState] = useState<Season | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("forcedSeason") as Season | null;
-    if (stored) setForcedSeasonState(stored);
-  }, []);
-
-  const activeSeason = forcedSeason || season;
-
-  function forceSeason2(s: Season) {
-    setForcedSeasonState(s);
-    localStorage.setItem("theme", "season");
-    localStorage.setItem("forcedSeason", s);
-    setTheme("season");
-    apply("season", s);
-  }
-
-  return <ThemeContext.Provider value={{ theme, season: activeSeason, toggle, forceSeason: forceSeason2 }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ theme, season, toggle }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() { return useContext(ThemeContext); }
 
-const ALL_SEASONS: Season[] = ["spring","summer","autumn","halloween","winter","christmas"];
-
 export function ThemeToggle() {
-  const { theme, season, toggle, forceSeason } = useTheme();
-  const [showSeasons, setShowSeasons] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setShowSeasons(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  function handleMainClick() {
-    if (theme === "season") {
-      setShowSeasons(p => !p);
-    } else {
-      toggle();
-    }
-  }
-
+  const { theme, season, toggle } = useTheme();
   const label =
     theme === "light" ? "Cambiar a oscuro" :
-    theme === "dark"  ? "Cambiar a temporada" :
-    `Temporada: ${SEASON_CONFIG[season].label}`;
+    theme === "dark"  ? "Cambiar a temporada" : "Cambiar a claro";
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={handleMainClick}
-        className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors
-          text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800
-          hover:text-neutral-700 dark:hover:text-neutral-200"
-        style={theme === "season" ? { color: SEASON_CONFIG[season].accentColor } : undefined}
-        aria-label={label} title={label}
-      >
-        {theme === "dark"   ? <SunIcon /> :
-         theme === "season" ? <SeasonIcon season={season} /> :
-         <MoonIcon />}
-      </button>
-
-      {/* Season picker dropdown — only in season mode */}
-      {showSeasons && (
-        <div className="absolute right-0 top-full mt-1 z-50 rounded-2xl border border-neutral-200 dark:border-neutral-700
-          bg-white dark:bg-neutral-900 shadow-xl py-1.5 min-w-[160px]">
-          {ALL_SEASONS.map(s => (
-            <button
-              key={s}
-              onClick={() => { forceSeason(s); setShowSeasons(false); }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors
-                hover:bg-neutral-50 dark:hover:bg-neutral-800 text-left"
-              style={s === season ? { color: SEASON_CONFIG[s].accentColor, fontWeight: 500 } : undefined}
-            >
-              <span style={{ color: SEASON_CONFIG[s].accentColor }}><SeasonIcon season={s} /></span>
-              <span className="text-neutral-700 dark:text-neutral-300">{SEASON_CONFIG[s].label}</span>
-              {s === season && <span className="ml-auto text-[10px]" style={{ color: SEASON_CONFIG[s].accentColor }}>✓</span>}
-            </button>
-          ))}
-          <div className="border-t border-neutral-100 dark:border-neutral-800 my-1" />
-          <button
-            onClick={() => { toggle(); setShowSeasons(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-neutral-500
-              hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
-          >
-            <MoonIcon />
-            <span>Volver a claro</span>
-          </button>
-        </div>
-      )}
-    </div>
+    <button onClick={toggle}
+      className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+        text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800
+        hover:text-neutral-700 dark:hover:text-neutral-200"
+      style={theme === "season" ? { color: SEASON_CONFIG[season].accentColor } : undefined}
+      aria-label={label} title={label}
+    >
+      {theme === "dark"   ? <SunIcon /> :
+       theme === "season" ? <SeasonIcon season={season} /> :
+       <MoonIcon />}
+    </button>
   );
 }
 
