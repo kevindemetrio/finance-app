@@ -197,7 +197,8 @@ export default function HomePage() {
           <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">
             <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} />
             <ThemeToggle />
-            <div className="relative">
+            {/* stopPropagation on mousedown so SettingsPanel's outside-click handler doesn't fire when clicking this button */}
+            <div className="relative" onMouseDown={e => e.stopPropagation()}>
               <button
                 onClick={() => setShowSettings(v => !v)}
                 title="Ajustes"
@@ -214,13 +215,11 @@ export default function HomePage() {
                   settings={settings}
                   onUpdate={updateSettings}
                   onOpenTemplate={() => setShowTemplate(true)}
+                  onLogout={handleLogout}
                   onClose={() => setShowSettings(false)}
                 />
               )}
             </div>
-            <button onClick={handleLogout} title="Cerrar sesión" className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-              <LogoutIcon />
-            </button>
           </div>
         </div>
 
@@ -326,13 +325,13 @@ export default function HomePage() {
                 if (key === "incomes") return (
                   <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                     entries={data.incomes} storageKey="incomes"
-                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
+                    showCategory={prefs.showCategory} showPaid={false} {...common}
                     onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
                 );
                 if (key === "savings") return (
                   <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
                     entries={data.savingsEntries} storageKey="savings"
-                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
+                    showCategory={prefs.showCategory} showPaid={false} {...common}
                     onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
                 );
                 if (key === "fixedExpenses") return (

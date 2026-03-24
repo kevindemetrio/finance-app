@@ -58,17 +58,28 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
 }
 
 const colorMap = {
-  green: "text-brand-green", red: "text-brand-red",
-  amber: "text-brand-amber", blue: "text-brand-blue", orange: "text-brand-orange",
+  green:  "text-brand-green",
+  red:    "text-brand-red",
+  amber:  "text-brand-amber",
+  blue:   "text-brand-blue",
+  orange: "text-brand-orange",
+};
+
+const accentMap = {
+  green:  "border-l-brand-green",
+  red:    "border-l-brand-red",
+  amber:  "border-l-brand-amber",
+  blue:   "border-l-brand-blue",
+  orange: "border-l-[#D85A30]",
 };
 
 function MetricCard({ label, value, color, children }: {
   label: string; value: string; color: keyof typeof colorMap; children?: React.ReactNode;
 }) {
   return (
-    <div className="metric-card">
-      <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1 truncate">{label}</p>
-      <p className={`text-sm sm:text-base font-medium leading-tight ${colorMap[color]}`}>{value}</p>
+    <div className={`metric-card border-l-[3px] ${accentMap[color]}`}>
+      <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-semibold truncate">{label}</p>
+      <p className={`text-base font-bold leading-tight ${colorMap[color]}`}>{value}</p>
       {children}
     </div>
   );

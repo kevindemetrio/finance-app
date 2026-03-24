@@ -15,6 +15,14 @@ export interface UserSettings {
   sectionPrefs: Record<SectionKey, SectionPrefs>;
 }
 
+// Fields configurable per section — showPaid not available for incomes/savings
+export const SECTION_AVAILABLE_FIELDS: Record<SectionKey, (keyof SectionPrefs)[]> = {
+  incomes:       ["showName", "showDate", "showCategory", "showNotes"],
+  savings:       ["showName", "showDate", "showCategory", "showNotes"],
+  fixedExpenses: ["showName", "showDate", "showCategory", "showNotes", "showPaid"],
+  varExpenses:   ["showName", "showDate", "showCategory", "showNotes", "showPaid"],
+};
+
 export const SECTION_LABELS: Record<SectionKey, string> = {
   incomes:       "Ingresos",
   savings:       "Ahorros",
