@@ -12,14 +12,27 @@ import { CategorySection } from "../components/inversiones/CategorySection";
 import { ThemeToggle, useTheme, SEASON_CONFIG } from "../components/ThemeProvider";
 import { DesktopTabs, Navbar } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
+import { SettingsPanel } from "../components/SettingsPanel";
+import { useUserSettings } from "../lib/userSettings";
 
 const CATEGORIES: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
+
+// Color accent per investment category (left border)
+const ACCENT_STYLE: Record<InvestmentCategory, string> = {
+  emergency: "border-l-brand-green",
+  variable:  "border-l-brand-blue",
+  fixed:     "border-l-brand-amber",
+  stock:     "border-l-[#7F77DD]",
+};
 
 export default function InversionesPage() {
   const router = useRouter();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, update: updateSettings } = useUserSettings();
   const fetchId = useRef(0);
 
   const load = useCallback(async () => {
@@ -38,7 +51,12 @@ export default function InversionesPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user?.email) setUserEmail(data.user.email);
+    });
+  }, [load]);
 
   async function handleLogout() {
     await createClient().auth.signOut();
@@ -65,14 +83,27 @@ export default function InversionesPage() {
           <h1 className="text-lg font-medium lg:hidden">Inversiones</h1>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400
-                hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-700
-                dark:hover:text-neutral-200 transition-colors"
-            >
-              <LogoutIcon />
-            </button>
+            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+              <button
+                onClick={() => setShowSettings(v => !v)}
+                title="Ajustes"
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+                  ${showSettings
+                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
+                    : "text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              >
+                <GearIcon />
+              </button>
+              {showSettings && (
+                <SettingsPanel
+                  userEmail={userEmail}
+                  settings={settings}
+                  onUpdate={updateSettings}
+                  onLogout={handleLogout}
+                  onClose={() => setShowSettings(false)}
+                />
+              )}
+            </div>
           </div>
         </div>
 
@@ -82,14 +113,11 @@ export default function InversionesPage() {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
             return (
-              <div key={cat} className="metric-card">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                  <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                    {CATEGORY_LABELS[cat]}
-                  </p>
-                </div>
-                <p className={`text-base font-medium ${colors.text}`}>{fmtEur(total)}</p>
+              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]}`}>
+                <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold truncate">
+                  {CATEGORY_LABELS[cat]}
+                </p>
+                <p className={`text-base font-bold ${colors.text}`}>{fmtEur(total)}</p>
                 <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
                   {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
                 </p>
@@ -103,8 +131,11 @@ export default function InversionesPage() {
           className="card flex items-center justify-between px-4 py-3 mb-5"
           style={seasonCfg ? { background: seasonCfg.metricBg, borderColor: seasonCfg.cardBorder } : undefined}
         >
-          <span className="text-sm" style={{ color: seasonCfg ? seasonCfg.titleColor : undefined }}>Total invertido</span>
-          <span className="text-lg font-medium" style={{ color: seasonCfg ? seasonCfg.accentColor : undefined }}>{fmtEur(grandTotal)}</span>
+          <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400"
+            style={{ color: seasonCfg ? seasonCfg.titleColor : undefined }}>
+            Total invertido
+          </span>
+          <span className="text-lg font-bold" style={{ color: seasonCfg ? seasonCfg.accentColor : undefined }}>{fmtEur(grandTotal)}</span>
         </div>
 
         {/* Error */}
@@ -138,12 +169,6 @@ export default function InversionesPage() {
   );
 }
 
-function LogoutIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  );
+function GearIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }

@@ -9,6 +9,8 @@ import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
 import { toast, confirm } from "../components/Toast";
 import { GhostButton, IconButton, PrimaryButton, SaveButton, TextInput } from "../components/ui";
+import { SettingsPanel } from "../components/SettingsPanel";
+import { useUserSettings } from "../lib/userSettings";
 
 const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
 
@@ -23,6 +25,9 @@ export default function MetasPage() {
   const [editingId, setEditingId]     = useState<string | null>(null);
   const [editMode, setEditMode]       = useState<EditMode>("add_saved");
   const [addAmount, setAddAmount]     = useState<Record<string, string>>({});
+  const [userEmail, setUserEmail]     = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, update: updateSettings } = useUserSettings();
 
   // New goal fields
   const [newName, setNewName]     = useState("");
@@ -40,6 +45,9 @@ export default function MetasPage() {
   useEffect(() => {
     reload().then(() => setLoading(false));
     getAvgMonthlySavings().then(setAvgSavings);
+    createClient().auth.getUser().then(({ data }) => {
+      if (data.user?.email) setUserEmail(data.user.email);
+    });
   }, [reload]);
 
   async function handleCreate() {
@@ -105,22 +113,49 @@ export default function MetasPage() {
           <h1 className="text-lg font-medium lg:hidden">Metas</h1>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <button onClick={handleLogout} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-              <LogoutIcon />
-            </button>
+            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+              <button
+                onClick={() => setShowSettings(v => !v)}
+                title="Ajustes"
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+                  ${showSettings
+                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
+                    : "text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              >
+                <GearIcon />
+              </button>
+              {showSettings && (
+                <SettingsPanel
+                  userEmail={userEmail}
+                  settings={settings}
+                  onUpdate={updateSettings}
+                  onLogout={handleLogout}
+                  onClose={() => setShowSettings(false)}
+                />
+              )}
+            </div>
           </div>
         </div>
 
         {goals.length > 0 && (
           <div className="grid grid-cols-3 gap-2.5 mb-5">
-            <div className="metric-card"><p className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1">Activas</p><p className="text-base font-medium">{goals.filter(g => g.savedAmount < g.targetAmount).length}</p></div>
-            <div className="metric-card"><p className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1">Completadas</p><p className="text-base font-medium text-brand-green">{goals.filter(g => g.savedAmount >= g.targetAmount).length}</p></div>
-            <div className="metric-card"><p className="text-[11px] uppercase tracking-wider text-neutral-400 mb-1">Total objetivo</p><p className="text-base font-medium">{fmtEur(goals.reduce((a,g)=>a+g.targetAmount,0))}</p></div>
+            <div className="metric-card border-l-[3px] border-l-brand-blue">
+              <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold">Activas</p>
+              <p className="text-base font-bold">{goals.filter(g => g.savedAmount < g.targetAmount).length}</p>
+            </div>
+            <div className="metric-card border-l-[3px] border-l-brand-green">
+              <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold">Completadas</p>
+              <p className="text-base font-bold text-brand-green">{goals.filter(g => g.savedAmount >= g.targetAmount).length}</p>
+            </div>
+            <div className="metric-card border-l-[3px] border-l-brand-amber">
+              <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold">Total objetivo</p>
+              <p className="text-base font-bold">{fmtEur(goals.reduce((a,g)=>a+g.targetAmount,0))}</p>
+            </div>
           </div>
         )}
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Metas de ahorro</h2>
+          <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Metas de ahorro</h2>
           <PrimaryButton onClick={() => setAdding(a => !a)}>+ Nueva meta</PrimaryButton>
         </div>
 
@@ -176,7 +211,7 @@ export default function MetasPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-3 h-3 rounded-full shrink-0" style={{ background: goal.color }} />
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{goal.name}</p>
+                        <p className="text-sm font-semibold truncate">{goal.name}</p>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400">
                           {fmtEur(goal.savedAmount)} de {fmtEur(goal.targetAmount)}
                         </p>
@@ -196,7 +231,7 @@ export default function MetasPage() {
 
                   <div className="flex justify-between text-xs text-neutral-400 mb-1">
                     {done
-                      ? <span style={{ color: goal.color }} className="font-medium">✓ Meta completada</span>
+                      ? <span style={{ color: goal.color }} className="font-semibold">✓ Meta completada</span>
                       : <span>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</span>}
                     {goal.deadline && <span>Límite: {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</span>}
                   </div>
@@ -208,7 +243,7 @@ export default function MetasPage() {
                     const label = arrival.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
                     return (
                       <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                        A este ritmo, en <span className="font-medium" style={{ color: goal.color }}>{label}</span> ({months} mes{months !== 1 ? "es" : ""})
+                        A este ritmo, en <span className="font-semibold" style={{ color: goal.color }}>{label}</span> ({months} mes{months !== 1 ? "es" : ""})
                       </p>
                     );
                   })()}
@@ -249,7 +284,9 @@ export default function MetasPage() {
   );
 }
 
-function LogoutIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
+function GearIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+}
 function PlusIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
 function PencilIcon() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>; }
 function XIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>; }

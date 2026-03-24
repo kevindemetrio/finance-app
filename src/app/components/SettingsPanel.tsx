@@ -81,39 +81,64 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
     <div
       ref={ref}
       className="absolute right-0 top-full mt-2 w-[22rem] rounded-2xl
-        bg-white dark:bg-neutral-900
-        border border-neutral-100 dark:border-neutral-800
-        shadow-[0_8px_32px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)]
-        dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]
+        bg-white dark:bg-[#141416]
+        border border-neutral-200/70 dark:border-neutral-800
+        shadow-[0_12px_40px_rgba(0,0,0,0.13),0_3px_10px_rgba(0,0,0,0.07)]
+        dark:shadow-[0_12px_40px_rgba(0,0,0,0.5)]
         z-50 overflow-hidden"
     >
-      {/* ── User section ── */}
-      <div className="px-4 py-3.5 flex items-center gap-3 border-b border-neutral-100 dark:border-neutral-800">
-        {/* Avatar */}
-        <div className="w-9 h-9 rounded-full bg-brand-blue-light dark:bg-blue-950/60
-          flex items-center justify-center shrink-0 select-none">
-          <span className="text-sm font-bold text-brand-blue">{initial}</span>
+      {/* ── Top bar: title + close ───────────────────────────────────── */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+            Ajustes
+          </span>
         </div>
-        {/* Email */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">Cuenta</p>
-          <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate">{userEmail || "—"}</p>
-        </div>
-        {/* Logout */}
         <button
-          onClick={onLogout}
-          title="Cerrar sesión"
-          className="flex items-center gap-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-500
-            hover:text-brand-red dark:hover:text-red-400 transition-colors shrink-0 py-1 px-1.5 rounded-lg
-            hover:bg-red-50 dark:hover:bg-red-950/40"
+          onClick={onClose}
+          className="w-6 h-6 flex items-center justify-center rounded-lg
+            text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200
+            hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+          title="Cerrar"
         >
-          <LogoutIcon />
-          Salir
+          <XIcon />
         </button>
       </div>
 
-      {/* ── Account actions ── */}
-      <div className="px-3 py-2 border-b border-neutral-100 dark:border-neutral-800 space-y-0.5">
+      {/* ── User section ────────────────────────────────────────────── */}
+      <div className="mx-3 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
+        <div className="px-3 py-3 flex items-center gap-3">
+          {/* Avatar */}
+          <div className="w-10 h-10 rounded-full shrink-0 select-none
+            bg-gradient-to-br from-brand-blue-light to-blue-100 dark:from-blue-950 dark:to-blue-900
+            flex items-center justify-center
+            shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(55,138,221,0.2)]
+            dark:shadow-none">
+            <span className="text-sm font-black text-brand-blue">{initial}</span>
+          </div>
+          {/* Email */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">Cuenta</p>
+            <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate leading-none">{userEmail || "—"}</p>
+          </div>
+        </div>
+        {/* Logout inside user card */}
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium
+            text-neutral-500 dark:text-neutral-500
+            hover:bg-red-50 dark:hover:bg-red-950/40
+            hover:text-brand-red dark:hover:text-red-400
+            border-t border-neutral-100 dark:border-neutral-700/50
+            transition-colors"
+        >
+          <LogoutIcon />
+          Cerrar sesión
+        </button>
+      </div>
+
+      {/* ── Account actions ─────────────────────────────────────────── */}
+      <div className="px-3 mb-3 space-y-0.5">
         <ActionRow icon={<KeyIcon />} label={sendingReset ? "Enviando…" : "Cambiar contraseña"}
           onClick={handlePasswordReset} disabled={sendingReset} />
         {onOpenTemplate && (
@@ -122,27 +147,32 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
         )}
       </div>
 
-      {/* ── Section order ── */}
-      <div className="px-4 pt-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-        <SectionTitle>Orden de secciones</SectionTitle>
+      {/* ── Divider ─────────────────────────────────────────────────── */}
+      <div className="mx-3 h-px bg-neutral-100 dark:bg-neutral-800 mb-3" />
+
+      {/* ── Section order ───────────────────────────────────────────── */}
+      <div className="px-4 mb-3">
+        <PanelSectionTitle icon={<OrderIcon />}>Orden de secciones</PanelSectionTitle>
         <div className="space-y-0.5 mt-2">
           {settings.sectionOrder.map((key, i) => (
-            <div key={key} className="flex items-center gap-2 py-1 group">
-              <span className="w-4 text-center text-[11px] font-semibold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">
+            <div key={key} className="flex items-center gap-2 py-1 group rounded-lg px-1 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+              <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">
                 {i + 1}
               </span>
               <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{SECTION_LABELS[key]}</span>
-              <div className="flex opacity-60 group-hover:opacity-100 transition-opacity">
+              <div className="flex opacity-40 group-hover:opacity-100 transition-opacity gap-0.5">
                 <button onClick={() => moveSection(key, -1)} disabled={i === 0}
-                  className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400
-                    hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800
-                    disabled:opacity-20 transition-all">
+                  className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-500
+                    hover:text-neutral-800 dark:hover:text-neutral-200
+                    hover:bg-neutral-200 dark:hover:bg-neutral-700
+                    disabled:opacity-25 transition-all">
                   <ChevronUpIcon />
                 </button>
                 <button onClick={() => moveSection(key, 1)} disabled={i === settings.sectionOrder.length - 1}
-                  className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400
-                    hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800
-                    disabled:opacity-20 transition-all">
+                  className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-500
+                    hover:text-neutral-800 dark:hover:text-neutral-200
+                    hover:bg-neutral-200 dark:hover:bg-neutral-700
+                    disabled:opacity-25 transition-all">
                   <ChevronDownIcon />
                 </button>
               </div>
@@ -151,62 +181,73 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
         </div>
       </div>
 
-      {/* ── Field visibility per section ── */}
-      <div className="px-4 pt-3 pb-3 max-h-60 overflow-y-auto">
-        <SectionTitle>Campos visibles</SectionTitle>
-        <div className="mt-2 space-y-1">
+      {/* ── Divider ─────────────────────────────────────────────────── */}
+      <div className="mx-3 h-px bg-neutral-100 dark:bg-neutral-800 mb-3" />
+
+      {/* ── Field visibility ────────────────────────────────────────── */}
+      <div className="px-4 pb-4 max-h-56 overflow-y-auto">
+        <PanelSectionTitle icon={<EyeIcon />}>Campos visibles</PanelSectionTitle>
+        <div className="mt-2 space-y-0.5">
           {settings.sectionOrder.map(key => {
             const availableFields = SECTION_AVAILABLE_FIELDS[key];
             const fieldLabels = ALL_FIELD_LABELS.filter(f => availableFields.includes(f.key));
+            const onCount = fieldLabels.filter(f => settings.sectionPrefs[key][f.key]).length;
+            const isOpen = activeSection === key;
             return (
               <div key={key}>
                 <button
-                  onClick={() => setActiveSection(activeSection === key ? null : key)}
-                  className="w-full flex items-center justify-between text-sm font-medium
-                    text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100
-                    transition-colors py-1.5 rounded-lg"
+                  onClick={() => setActiveSection(isOpen ? null : key)}
+                  className={`w-full flex items-center justify-between text-sm font-medium
+                    transition-colors rounded-lg px-2 py-1.5
+                    ${isOpen
+                      ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                      : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-neutral-100"
+                    }`}
                 >
-                  <span className="flex items-center gap-2">
-                    {SECTION_LABELS[key]}
-                    {/* Mini preview of active fields */}
-                    <span className="text-[10px] text-neutral-400 dark:text-neutral-600 font-normal">
-                      {fieldLabels.filter(f => settings.sectionPrefs[key][f.key]).length}/{fieldLabels.length}
+                  <span>{SECTION_LABELS[key]}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                      ${isOpen
+                        ? "bg-brand-blue text-white"
+                        : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
+                      }`}>
+                      {onCount}/{fieldLabels.length}
                     </span>
-                  </span>
-                  <svg className={`w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 transition-transform duration-150 ${activeSection === key ? "rotate-180" : ""}`}
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
+                    <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
                 </button>
 
-                {activeSection === key && (
-                  <div className="pl-3 pb-2 pt-0.5 space-y-2">
-                    {fieldLabels.map(({ key: field, label }) => {
+                {isOpen && (
+                  <div className="mx-2 mt-1 mb-1 rounded-xl bg-neutral-50 dark:bg-neutral-800/60
+                    border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
+                    {fieldLabels.map(({ key: field, label }, fi) => {
                       const on = settings.sectionPrefs[key][field];
                       return (
-                        <label key={field} className="flex items-center gap-2.5 cursor-pointer select-none group/field">
-                          {/* Custom checkbox */}
-                          <span
-                            onClick={() => toggleField(key, field)}
-                            className={`w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all shrink-0
-                              ${on
-                                ? "bg-brand-blue border-brand-blue shadow-[0_0_0_3px_rgba(55,138,221,0.12)]"
-                                : "border-neutral-200 dark:border-neutral-700 group-hover/field:border-neutral-300 dark:group-hover/field:border-neutral-600"
-                              }`}
+                        <button
+                          key={field}
+                          onClick={() => toggleField(key, field)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm
+                            transition-colors text-left
+                            ${fi < fieldLabels.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}
+                            ${on
+                              ? "hover:bg-white dark:hover:bg-neutral-700/60"
+                              : "hover:bg-neutral-100 dark:hover:bg-neutral-700/40"
+                            }`}
+                        >
+                          {/* Toggle pill */}
+                          <div className={`relative w-8 h-4.5 h-[18px] rounded-full transition-all shrink-0
+                            ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}
                           >
-                            {on && (
-                              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5">
-                                <polyline points="2 6 5 9 10 3" />
-                              </svg>
-                            )}
-                          </span>
-                          <span
-                            onClick={() => toggleField(key, field)}
-                            className={`text-sm transition-colors ${on ? "text-neutral-700 dark:text-neutral-300" : "text-neutral-400 dark:text-neutral-600"}`}
-                          >
+                            <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all
+                              ${on ? "left-[18px]" : "left-[2px]"}`} />
+                          </div>
+                          <span className={`transition-colors ${on ? "text-neutral-800 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-600"}`}>
                             {label}
                           </span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -220,11 +261,14 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function PanelSectionTitle({ children, icon }: { children: React.ReactNode; icon: React.ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-      {children}
-    </p>
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-neutral-400 dark:text-neutral-600">{icon}</span>
+      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+        {children}
+      </span>
+    </div>
   );
 }
 
@@ -235,30 +279,39 @@ function ActionRow({ icon, label, onClick, disabled }: {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full flex items-center gap-3 px-2 py-2 rounded-xl text-sm
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm
         text-neutral-600 dark:text-neutral-400
         hover:text-neutral-900 dark:hover:text-neutral-100
-        hover:bg-neutral-50 dark:hover:bg-neutral-800
+        hover:bg-neutral-100 dark:hover:bg-neutral-800
         transition-colors disabled:opacity-50"
     >
-      <span className="text-neutral-400 dark:text-neutral-500">{icon}</span>
+      <span className="text-neutral-400 dark:text-neutral-500 shrink-0">{icon}</span>
       {label}
     </button>
   );
 }
 
+function XIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
 function LogoutIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
 }
 function KeyIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>;
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>;
 }
 function GridIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
 }
 function ChevronUpIcon() {
   return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>;
 }
 function ChevronDownIcon() {
   return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>;
+}
+function OrderIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+}
+function EyeIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 }

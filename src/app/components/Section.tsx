@@ -97,7 +97,7 @@ export function Section({
             </div>
 
             {entries.length === 0 ? (
-              <div className="px-4 py-10 text-center flex flex-col items-center gap-3">
+              <div className="px-4 py-10 text-center flex flex-col items-center gap-3 bg-neutral-50/40 dark:bg-neutral-800/10">
                 <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 dark:text-neutral-600">
                   <PlusIcon size={16} />
                 </div>
@@ -111,17 +111,20 @@ export function Section({
                 </div>
               </div>
             ) : (
-              [...entries]
-                .map((entry, idx) => ({ entry, idx }))
-                .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
-                .map(({ entry, idx }) => (
-                  <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
-                    showPaid={showPaid} showCategory={showCategory}
-                    showDate={showDate} showNotes={showNotes} showName={showName}
-                    onUpdate={updated => onUpdate(idx, updated)}
-                    onDelete={() => onDelete(idx)}
-                  />
-                ))
+              <div className="bg-neutral-50/30 dark:bg-neutral-800/10">
+                {[...entries]
+                  .map((entry, idx) => ({ entry, idx }))
+                  .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
+                  .map(({ entry, idx }) => (
+                    <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
+                      showPaid={showPaid} showCategory={showCategory}
+                      showDate={showDate} showNotes={showNotes} showName={showName}
+                      onUpdate={updated => onUpdate(idx, updated)}
+                      onDelete={() => onDelete(idx)}
+                    />
+                  ))
+                }
+              </div>
             )}
           </>
         )}

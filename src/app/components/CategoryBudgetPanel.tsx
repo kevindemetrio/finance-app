@@ -102,28 +102,27 @@ export function CategoryBudgetPanel({
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <button
         type="button" onClick={toggle}
-        className="w-full flex items-center justify-between px-4 py-3.5
-          hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors
+        className="w-full flex items-center justify-between px-4 py-4
+          hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors
           border-b border-neutral-100 dark:border-neutral-800"
         style={cfg ? { borderColor: cfg.rowBorder } : undefined}
       >
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-brand-red" />
-          <span className="text-sm font-medium" style={cfg ? { color: cfg.titleColor } : undefined}>Presupuestos</span>
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-brand-red" />
+          <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200" style={cfg ? { color: cfg.titleColor } : undefined}>Presupuestos</span>
           {definedCount > 0 && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-600">
-              {definedCount} definido{definedCount !== 1 ? "s" : ""}
+            <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-600
+              bg-neutral-100 dark:bg-neutral-800 rounded-full px-1.5 py-0.5 leading-none">
+              {definedCount}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <svg
-            className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </div>
+        <svg
+          className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
 
       {open && (
