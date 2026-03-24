@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes next build)",
+      "Bash(./node_modules/.bin/tsc --noEmit)"
+    ]
+  }
+}

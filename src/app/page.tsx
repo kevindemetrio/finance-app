@@ -19,6 +19,8 @@ import { SeasonWrapper } from "./components/SeasonWrapper";
 import { CategoryBudgetPanel } from "./components/CategoryBudgetPanel";
 import { toast, confirm as confirmDialog } from "./components/Toast";
 import { PdfReportButton } from "./components/PdfReportButton";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { useUserSettings, SectionKey } from "./lib/userSettings";
 
 function emptyMonth(): MonthData {
   return { incomes:[], fixedExpenses:[], varExpenses:[], savingsEntries:[], varBudget:0, carryover:0 };
@@ -44,6 +46,8 @@ export default function HomePage() {
   const [searching, setSearching]    = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
   const [importing, setImporting]    = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const { settings, update: updateSettings } = useUserSettings();
   const fetchId = useRef(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
@@ -193,7 +197,28 @@ export default function HomePage() {
           <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">
             <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} />
             <ThemeToggle />
-            <button onClick={handleLogout} title={userEmail} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+            <div className="relative">
+              <button
+                onClick={() => setShowSettings(v => !v)}
+                title="Ajustes"
+                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
+                  ${showSettings
+                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
+                    : "text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+              >
+                <GearIcon />
+              </button>
+              {showSettings && (
+                <SettingsPanel
+                  userEmail={userEmail}
+                  settings={settings}
+                  onUpdate={updateSettings}
+                  onOpenTemplate={() => setShowTemplate(true)}
+                  onClose={() => setShowSettings(false)}
+                />
+              )}
+            </div>
+            <button onClick={handleLogout} title="Cerrar sesión" className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
               <LogoutIcon />
             </button>
           </div>
@@ -293,22 +318,37 @@ export default function HomePage() {
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Section title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
-                entries={data.incomes} storageKey="incomes"
-                onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
-
-              <Section title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
-                entries={data.savingsEntries} storageKey="savings"
-                onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
-
-              <Section title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
-                entries={data.fixedExpenses} showPaid showCategory storageKey="fixed"
-                bodyHeader={fixedBodyHeader}
-                onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
-
-              <Section title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
-                entries={data.varExpenses} showCategory storageKey="variable"
-                onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
+              {settings.sectionOrder.map((key: SectionKey) => {
+                const prefs = settings.sectionPrefs[key];
+                const common = {
+                  showDate: prefs.showDate, showNotes: prefs.showNotes, showName: prefs.showName,
+                };
+                if (key === "incomes") return (
+                  <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
+                    entries={data.incomes} storageKey="incomes"
+                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
+                    onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
+                );
+                if (key === "savings") return (
+                  <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
+                    entries={data.savingsEntries} storageKey="savings"
+                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
+                    onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
+                );
+                if (key === "fixedExpenses") return (
+                  <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
+                    entries={data.fixedExpenses} storageKey="fixed"
+                    showPaid={prefs.showPaid} showCategory={prefs.showCategory} {...common}
+                    bodyHeader={fixedBodyHeader}
+                    onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
+                );
+                return (
+                  <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
+                    entries={data.varExpenses} storageKey="variable"
+                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
+                    onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
+                );
+              })}
             </div>
             <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
           </>
@@ -320,6 +360,9 @@ export default function HomePage() {
 
 function LogoutIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+}
+function GearIcon() {
+  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
 function GridIcon() {
   return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;

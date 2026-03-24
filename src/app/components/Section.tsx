@@ -13,6 +13,9 @@ interface Props {
   entries: Entry[];
   showPaid?: boolean;
   showCategory?: boolean;
+  showDate?: boolean;
+  showNotes?: boolean;
+  showName?: boolean;
   emptyMessage?: string;
   headerAfter?: React.ReactNode;
   bodyHeader?: React.ReactNode;
@@ -24,6 +27,7 @@ interface Props {
 
 export function Section({
   title, dotColor, totalColor, sign, entries, showPaid, showCategory,
+  showDate, showNotes, showName,
   emptyMessage, headerAfter, bodyHeader, storageKey, onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
@@ -113,6 +117,7 @@ export function Section({
                 .map(({ entry, idx }) => (
                   <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
                     showPaid={showPaid} showCategory={showCategory}
+                    showDate={showDate} showNotes={showNotes} showName={showName}
                     onUpdate={updated => onUpdate(idx, updated)}
                     onDelete={() => onDelete(idx)}
                   />

@@ -10,6 +10,9 @@ interface Props {
   colorClass: string;
   showPaid?: boolean;
   showCategory?: boolean;
+  showDate?: boolean;
+  showNotes?: boolean;
+  showName?: boolean;
   onUpdate: (updated: Entry) => void;
   onDelete: () => void;
 }
@@ -37,7 +40,7 @@ export function CategoryBadge({ cat }: { cat: string }) {
   );
 }
 
-export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUpdate, onDelete }: Props) {
+export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, showDate = true, showNotes = true, showName = true, onUpdate, onDelete }: Props) {
   const [editing, setEditing]   = useState(false);
   const [name, setName]         = useState(entry.name);
   const [amount, setAmount]     = useState(String(entry.amount));
@@ -67,12 +70,12 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, onUp
     <div>
       <div className="flex items-center gap-2 px-4 py-2.5 text-sm border-b border-neutral-100 dark:border-neutral-800 last:border-0">
         <div className="flex-1 min-w-0">
-          <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>
-          {entry.notes && (
+          {showName && <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>}
+          {showNotes && entry.notes && (
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-snug mt-0.5 italic">{entry.notes}</p>
           )}
         </div>
-        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 shrink-0 w-10">{fmtDate(entry.date)}</span>
+        {showDate && <span className="text-[11px] text-neutral-400 dark:text-neutral-500 shrink-0 w-10">{fmtDate(entry.date)}</span>}
         {showCategory && entry.category && <CategoryBadge cat={entry.category} />}
         {showPaid && (
           <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
