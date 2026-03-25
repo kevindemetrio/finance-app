@@ -14,7 +14,8 @@ import { SeasonWrapper } from "../components/SeasonWrapper";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { useUserSettings } from "../lib/userSettings";
 
-const CATEGORIES: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
+const DEFAULT_CAT_ORDER: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
+const INV_ORDER_KEY = "investment_cat_order";
 
 // Color accent per investment category (left border)
 const ACCENT_STYLE: Record<InvestmentCategory, string> = {
@@ -30,6 +31,7 @@ export default function InversionesPage() {
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [catOrder, setCatOrder] = useState<InvestmentCategory[]>(DEFAULT_CAT_ORDER);
   const { settings, update: updateSettings } = useUserSettings();
   const fetchId = useRef(0);
 
@@ -54,7 +56,21 @@ export default function InversionesPage() {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
+    const saved = localStorage.getItem(INV_ORDER_KEY);
+    if (saved) { try { setCatOrder(JSON.parse(saved)); } catch {} }
   }, [load]);
+
+  function moveCat(cat: InvestmentCategory, dir: -1 | 1) {
+    setCatOrder(prev => {
+      const order = [...prev];
+      const i = order.indexOf(cat);
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[i], order[j]] = [order[j], order[i]];
+      try { localStorage.setItem(INV_ORDER_KEY, JSON.stringify(order)); } catch {}
+      return order;
+    });
+  }
 
   const { theme, season } = useTheme();
   const isSeason = theme === "season";
@@ -98,13 +114,13 @@ export default function InversionesPage() {
           </div>
         </div>
 
-        {/* Summary cards */}
+        {/* Summary cards + reorder */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-6">
-          {CATEGORIES.map((cat) => {
+          {catOrder.map((cat, i) => {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
             return (
-              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]}`}>
+              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]} relative group`}>
                 <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold truncate">
                   {CATEGORY_LABELS[cat]}
                 </p>
@@ -112,6 +128,18 @@ export default function InversionesPage() {
                 <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
                   {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
                 </p>
+                <div className="absolute top-1.5 right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => moveCat(cat, -1)} disabled={i === 0}
+                    className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all"
+                    title="Mover izquierda / arriba">
+                    <TinyChevLeftIcon />
+                  </button>
+                  <button onClick={() => moveCat(cat, 1)} disabled={i === catOrder.length - 1}
+                    className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all"
+                    title="Mover derecha / abajo">
+                    <TinyChevRightIcon />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -145,7 +173,7 @@ export default function InversionesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {CATEGORIES.map((cat) => (
+            {catOrder.map((cat) => (
               <CategorySection
                 key={cat}
                 category={cat}
@@ -162,4 +190,10 @@ export default function InversionesPage() {
 
 function GearIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+}
+function TinyChevLeftIcon() {
+  return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6"/></svg>;
+}
+function TinyChevRightIcon() {
+  return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6"/></svg>;
 }

@@ -40,14 +40,43 @@ export default function MetasPage() {
   const [editDate, setEditDate]     = useState("");
   const [editColor, setEditColor]   = useState(GOAL_COLORS[0]);
 
-  const reload = useCallback(() => loadGoals().then(setGoals), []);
+  const [goalOrder, setGoalOrder] = useState<string[]>([]);
+
+  const reload = useCallback(() => loadGoals().then(g => {
+    setGoals(g);
+    // Initialize order with any new IDs not yet tracked
+    setGoalOrder(prev => {
+      const existing = new Set(prev);
+      const newIds = g.map(x => x.id).filter(id => !existing.has(id));
+      return [...prev.filter(id => g.some(x => x.id === id)), ...newIds];
+    });
+  }), []);
 
   useEffect(() => {
+    const saved = localStorage.getItem("goal_order");
+    if (saved) { try { setGoalOrder(JSON.parse(saved)); } catch {} }
     reload().then(() => setLoading(false));
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
   }, [reload]);
+
+  function saveGoalOrder(order: string[]) {
+    setGoalOrder(order);
+    try { localStorage.setItem("goal_order", JSON.stringify(order)); } catch {}
+  }
+
+  function moveGoal(id: string, dir: -1 | 1) {
+    setGoalOrder(prev => {
+      const order = [...prev];
+      const i = order.indexOf(id);
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[i], order[j]] = [order[j], order[i]];
+      try { localStorage.setItem("goal_order", JSON.stringify(order)); } catch {}
+      return order;
+    });
+  }
 
   async function handleCreate() {
     if (!newName.trim() || !newTarget) return;
@@ -87,6 +116,7 @@ export default function MetasPage() {
     const ok = await confirm({ title: "¿Eliminar esta meta?", message: "No se puede deshacer.", danger: true });
     if (!ok) return;
     await deleteGoal(id);
+    saveGoalOrder(goalOrder.filter(x => x !== id));
     toast("Meta eliminada", "info");
     reload();
   }
@@ -202,7 +232,14 @@ export default function MetasPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {goals.map(goal => {
+            {[...goals].sort((a, b) => {
+              const ai = goalOrder.indexOf(a.id);
+              const bi = goalOrder.indexOf(b.id);
+              if (ai === -1 && bi === -1) return 0;
+              if (ai === -1) return 1;
+              if (bi === -1) return -1;
+              return ai - bi;
+            }).map((goal, sortedIdx, sortedArr) => {
               const pct  = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
               const done = goal.savedAmount >= goal.targetAmount;
               return (
@@ -222,6 +259,18 @@ export default function MetasPage() {
                       <IconButton onClick={() => openEdit(goal, "add_saved", "sub")} title="Retirar"><MinusIcon /></IconButton>
                       <IconButton onClick={() => openEdit(goal, "add_saved", "add")} title="Añadir ahorro"><PlusIcon /></IconButton>
                       <IconButton onClick={() => openEdit(goal, "edit_goal")} title="Editar meta"><PencilIcon /></IconButton>
+                      <div className="flex flex-col gap-0">
+                        <button onClick={() => moveGoal(goal.id, -1)} disabled={sortedIdx === 0}
+                          className="w-4 h-4 flex items-center justify-center text-neutral-300 dark:text-neutral-700 hover:text-neutral-500 disabled:opacity-20 transition-colors"
+                          title="Subir">
+                          <SmallChevUpIcon />
+                        </button>
+                        <button onClick={() => moveGoal(goal.id, 1)} disabled={sortedIdx === sortedArr.length - 1}
+                          className="w-4 h-4 flex items-center justify-center text-neutral-300 dark:text-neutral-700 hover:text-neutral-500 disabled:opacity-20 transition-colors"
+                          title="Bajar">
+                          <SmallChevDownIcon />
+                        </button>
+                      </div>
                       <IconButton danger onClick={() => handleDelete(goal.id)}><XIcon /></IconButton>
                     </div>
                   </div>
@@ -287,6 +336,8 @@ export default function MetasPage() {
 function GearIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
+function SmallChevUpIcon() { return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>; }
+function SmallChevDownIcon() { return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>; }
 function MinusIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
 function PlusIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
 function PencilIcon() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>; }

@@ -11,6 +11,10 @@ import { TemplateManager } from "../components/TemplateManager";
 import { toast, confirm } from "../components/Toast";
 import { GhostButton, PrimaryButton, SaveButton, TextInput } from "../components/ui";
 import { useCategories } from "../components/CategoriesProvider";
+import {
+  useUserSettings, SectionKey, SectionPrefs,
+  SECTION_LABELS as SECTION_LABELS_MAP, SECTION_AVAILABLE_FIELDS,
+} from "../lib/userSettings";
 
 const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
 const SECTION_COLOR_PRESETS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30","#5F5E5A"];
@@ -22,6 +26,14 @@ const SECTION_LABELS: Record<string, string> = {
   varExpenses: "Gastos variables",
 };
 const SECTION_KEYS = ["incomes", "savings", "fixedExpenses", "varExpenses"];
+
+const ALL_FIELD_LABELS: { key: keyof SectionPrefs; label: string }[] = [
+  { key: "showName",     label: "Descripción" },
+  { key: "showDate",     label: "Fecha" },
+  { key: "showCategory", label: "Categoría" },
+  { key: "showNotes",    label: "Notas" },
+  { key: "showPaid",     label: "Estado de pago" },
+];
 
 export default function AjustesPage() {
   const router = useRouter();
@@ -46,6 +58,10 @@ export default function AjustesPage() {
 
   // ── METAS ───────────────────────────────────────────────────────────────
   const [defaultGoalColor, setDefaultGoalColor] = useState(GOAL_COLORS[0]);
+
+  // ── FINANZAS — section order + fields ──────────────────────────────────
+  const { settings, update: updateSettings } = useUserSettings();
+  const [activeFieldSection, setActiveFieldSection] = useState<SectionKey | null>(null);
 
   // ── INVERSIONES accordion ───────────────────────────────────────────────
   const [invOpen, setInvOpen] = useState<string | null>(null);
@@ -85,6 +101,31 @@ export default function AjustesPage() {
     if (error) { toast(error.message, "error"); return; }
     toast("Contraseña actualizada");
     setNewPw(""); setConfirmPw(""); setShowPwForm(false);
+  }
+
+  // ── FINANZAS — section order + fields ────────────────────────────────────
+  function moveSection(key: SectionKey, dir: -1 | 1) {
+    updateSettings(prev => {
+      const order = [...prev.sectionOrder];
+      const i = order.indexOf(key);
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[i], order[j]] = [order[j], order[i]];
+      return { ...prev, sectionOrder: order };
+    });
+  }
+
+  function toggleField(section: SectionKey, field: keyof SectionPrefs) {
+    updateSettings(prev => ({
+      ...prev,
+      sectionPrefs: {
+        ...prev.sectionPrefs,
+        [section]: {
+          ...prev.sectionPrefs[section],
+          [field]: !prev.sectionPrefs[section][field],
+        },
+      },
+    }));
   }
 
   // ── FINANZAS — category handlers ─────────────────────────────────────────
@@ -228,16 +269,96 @@ export default function AjustesPage() {
           {/* ── FINANZAS ────────────────────────────────────────────────── */}
           <SettingsCard label="FINANZAS" dot="bg-brand-green">
 
+            {/* Orden de secciones */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de secciones</p>
+              <div className="space-y-0.5">
+                {settings.sectionOrder.map((key, i) => (
+                  <div key={key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                    <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
+                    <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{SECTION_LABELS_MAP[key]}</span>
+                    <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => moveSection(key, -1)} disabled={i === 0}
+                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                        <ChevUpIcon />
+                      </button>
+                      <button onClick={() => moveSection(key, 1)} disabled={i === settings.sectionOrder.length - 1}
+                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                        <ChevDownIcon />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Campos visibles por sección */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Campos visibles</p>
+              <div className="space-y-0.5">
+                {settings.sectionOrder.map(key => {
+                  const available = SECTION_AVAILABLE_FIELDS[key];
+                  const fields = ALL_FIELD_LABELS.filter(f => available.includes(f.key));
+                  const onCount = fields.filter(f => settings.sectionPrefs[key][f.key]).length;
+                  const isOpen = activeFieldSection === key;
+                  return (
+                    <div key={key}>
+                      <button
+                        onClick={() => setActiveFieldSection(isOpen ? null : key)}
+                        className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-sm font-medium transition-colors
+                          ${isOpen
+                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-neutral-100"}`}
+                      >
+                        <span>{SECTION_LABELS_MAP[key]}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                            ${isOpen ? "bg-brand-blue text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"}`}>
+                            {onCount}/{fields.length}
+                          </span>
+                          <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div className="mx-2 mt-1 mb-1 rounded-xl bg-neutral-50 dark:bg-neutral-800/60
+                          border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
+                          {fields.map(({ key: field, label }, fi) => {
+                            const on = settings.sectionPrefs[key][field];
+                            return (
+                              <button
+                                key={field}
+                                onClick={() => toggleField(key, field)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors text-left
+                                  hover:bg-white dark:hover:bg-neutral-700/60
+                                  ${fi < fields.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}`}
+                              >
+                                <div className={`relative w-8 h-[18px] rounded-full transition-all shrink-0 ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}>
+                                  <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${on ? "left-[18px]" : "left-[2px]"}`} />
+                                </div>
+                                <span className={on ? "text-neutral-800 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-600"}>
+                                  {label}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Template manager */}
             <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plantilla de gastos fijos</p>
                 <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Define tus recurrentes para importarlos cada mes</p>
               </div>
-              <button
-                onClick={() => setShowTemplate(true)}
-                className="text-xs text-brand-blue hover:underline shrink-0 ml-4"
-              >
+              <button onClick={() => setShowTemplate(true)} className="text-xs text-brand-blue hover:underline shrink-0 ml-4">
                 Gestionar
               </button>
             </div>
@@ -246,29 +367,19 @@ export default function AjustesPage() {
             <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Colores de secciones</p>
               <div className="space-y-3">
-                {SECTION_KEYS.map(key => (
+                {settings.sectionOrder.map(key => (
                   <div key={key} className="flex items-center gap-3">
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400 w-32 shrink-0">
-                      {SECTION_LABELS[key]}
-                    </span>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400 w-32 shrink-0">{SECTION_LABELS_MAP[key]}</span>
                     <div className="flex gap-1.5 flex-wrap">
                       {SECTION_COLOR_PRESETS.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => handleSectionColor(key, c)}
+                        <button key={c} onClick={() => handleSectionColor(key, c)}
                           className="w-5 h-5 rounded-full transition-transform hover:scale-110"
-                          style={{
-                            background: c,
-                            outline: sectionColors[key] === c ? `2px solid ${c}` : "none",
-                            outlineOffset: 2,
-                          }}
+                          style={{ background: c, outline: sectionColors[key] === c ? `2px solid ${c}` : "none", outlineOffset: 2 }}
                         />
                       ))}
                       {sectionColors[key] && (
-                        <button
-                          onClick={() => handleSectionColor(key, null)}
-                          className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 hover:text-neutral-600"
-                        >
+                        <button onClick={() => handleSectionColor(key, null)}
+                          className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 hover:text-neutral-600">
                           reset
                         </button>
                       )}
@@ -281,9 +392,7 @@ export default function AjustesPage() {
             {/* Categories */}
             <div>
               <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 flex-1">
-                  Categorías de gastos
-                </p>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 flex-1">Categorías de gastos</p>
                 {!catsLoading && (
                   <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-600
                     bg-neutral-100 dark:bg-neutral-800 rounded-full px-1.5 py-0.5 leading-none">
@@ -314,7 +423,6 @@ export default function AjustesPage() {
                             text-neutral-300 dark:text-neutral-700
                             hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-brand-red
                             disabled:cursor-not-allowed disabled:opacity-20 transition-all"
-                          title="Eliminar categoría"
                         >
                           <XIcon />
                         </button>
@@ -448,4 +556,10 @@ function LogoutIcon() {
 }
 function XIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+}
+function ChevUpIcon() {
+  return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>;
+}
+function ChevDownIcon() {
+  return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>;
 }
