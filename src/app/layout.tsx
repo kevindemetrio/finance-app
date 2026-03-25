@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ToastProvider } from "./components/Toast";
+import { CategoriesProvider } from "./components/CategoriesProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans`}>
         <ThemeProvider>
-          <ToastProvider />
-          {children}
+          <CategoriesProvider>
+            <ToastProvider />
+            {children}
+          </CategoriesProvider>
         </ThemeProvider>
       </body>
     </html>

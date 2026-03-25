@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Category, CATEGORIES, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
+import { Category, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
 import { Badge, GhostButton, IconButton, SaveButton, TextInput } from "./ui";
 import { toast } from "./Toast";
+import { useCategories } from "./CategoriesProvider";
 
 interface Props {
   entry: Entry;
@@ -43,6 +44,7 @@ export function CategoryBadge({ cat }: { cat: string }) {
 }
 
 export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, showDate = true, showNotes = true, showName = true, onUpdate, onDelete }: Props) {
+  const { categories } = useCategories();
   const [editing, setEditing]   = useState(false);
   const [name, setName]         = useState(entry.name);
   const [amount, setAmount]     = useState(String(entry.amount));
@@ -100,7 +102,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, show
           {showCategory && (
             <select value={category} onChange={e => setCategory(e.target.value)} className="input-base w-36">
               <option value="">Sin categoría</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
           {showPaid && (

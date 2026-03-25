@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES, Entry, todayStr, uid } from "../lib/data";
+import { Entry, todayStr, uid } from "../lib/data";
 import { PrimaryButton, TextInput } from "./ui";
+import { useCategories } from "./CategoriesProvider";
 
 interface Props {
   placeholder?: string;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function AddEntryForm({ placeholder = "Descripción", showCategory, onAdd }: Props) {
+  const { categories } = useCategories();
   const [name, setName]       = useState("");
   const [amount, setAmount]   = useState("");
   const [date, setDate]       = useState(todayStr());
@@ -47,7 +49,7 @@ export function AddEntryForm({ placeholder = "Descripción", showCategory, onAdd
         {showCategory && (
           <select value={category} onChange={e => setCategory(e.target.value)} className="input-base w-36">
             <option value="">Categoría</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
         <button

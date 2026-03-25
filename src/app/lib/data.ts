@@ -2,11 +2,14 @@ import { createClient } from "./supabase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export const CATEGORIES = [
+export const DEFAULT_CATEGORIES = [
   "Alimentación","Ocio","Tecnología","Transporte",
   "Hogar","Salud","Ropa","Regalos","Educación","Viajes","Otro",
-] as const;
-export type Category = typeof CATEGORIES[number];
+];
+export type Category = string;
+
+// Keep backward-compat alias for any leftover imports
+export const CATEGORIES = DEFAULT_CATEGORIES;
 
 export interface Entry {
   id: string;
@@ -268,7 +271,7 @@ export async function saveCategoryBudget(year: number, month: number, category: 
 }
 
 // ─── Savings projection ───────────────────────────────────────────────────────
-// Returns average monthly savings amount over the last N months with data
+
 export async function getAvgMonthlySavings(limitMonths = 6): Promise<number> {
   const supabase = createClient();
   const { data } = await supabase
@@ -278,8 +281,6 @@ export async function getAvgMonthlySavings(limitMonths = 6): Promise<number> {
     .order("year", { ascending: false })
     .order("month", { ascending: false });
   if (!data || data.length === 0) return 0;
-
-  // Group by year+month
   const byMonth: Record<string, number> = {};
   for (const r of data) {
     const key = `${r.year}-${r.month}`;
@@ -288,4 +289,65 @@ export async function getAvgMonthlySavings(limitMonths = 6): Promise<number> {
   const months = Object.values(byMonth).slice(0, limitMonths);
   if (months.length === 0) return 0;
   return months.reduce((a, v) => a + v, 0) / months.length;
+}
+
+// ─── User categories ──────────────────────────────────────────────────────────
+
+async function initDefaultCategories(userId: string): Promise<void> {
+  const supabase = createClient();
+  const rows = DEFAULT_CATEGORIES.map((name, i) => ({
+    user_id: userId,
+    name,
+    sort_order: i,
+  }));
+  await supabase.from("user_categories").insert(rows);
+}
+
+export async function loadCategories(): Promise<string[]> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [...DEFAULT_CATEGORIES];
+
+  const { data } = await supabase
+    .from("user_categories")
+    .select("name")
+    .eq("user_id", user.id)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (!data || data.length === 0) {
+    await initDefaultCategories(user.id);
+    return [...DEFAULT_CATEGORIES];
+  }
+
+  return data.map(r => r.name as string);
+}
+
+export async function createCategory(name: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Get current count for sort_order
+  const { count } = await supabase
+    .from("user_categories")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  await supabase.from("user_categories").insert({
+    user_id: user.id,
+    name,
+    sort_order: (count ?? 0),
+  });
+}
+
+export async function deleteCategory(name: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("user_categories")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("name", name);
 }

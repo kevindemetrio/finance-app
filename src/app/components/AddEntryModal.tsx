@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CATEGORIES, Entry, todayStr, uid } from "../lib/data";
+import { Entry, todayStr, uid } from "../lib/data";
 import { GhostButton, PrimaryButton, TextInput } from "./ui";
+import { useCategories } from "./CategoriesProvider";
 
 interface Props {
   title: string;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function AddEntryModal({ title, showCategory, showPaid, onAdd, onClose }: Props) {
+  const { categories } = useCategories();
   const [name, setName]         = useState("");
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState(todayStr());
@@ -87,7 +89,7 @@ export function AddEntryModal({ title, showCategory, showPaid, onAdd, onClose }:
               <label className="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Categoría</label>
               <select value={category} onChange={e => setCategory(e.target.value)} className="input-base w-full">
                 <option value="">Sin categoría</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           )}

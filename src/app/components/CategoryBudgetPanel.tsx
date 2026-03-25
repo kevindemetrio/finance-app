@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Category, CATEGORIES, CategoryBudget, Entry, fmtEur, saveCategoryBudget, saveMonthConfig } from "../lib/data";
+import { Category, CategoryBudget, Entry, fmtEur, saveCategoryBudget, saveMonthConfig } from "../lib/data";
 import { GhostButton, SaveButton, TextInput } from "./ui";
 import { useTheme, SEASON_CONFIG } from "./ThemeProvider";
+import { useCategories } from "./CategoriesProvider";
 
 interface Props {
   year: number;
@@ -39,6 +40,7 @@ export function CategoryBudgetPanel({
   const [editingCat, setEditingCat] = useState<Category | "global" | null>(null);
   const [editVal, setEditVal]       = useState("");
 
+  const { categories } = useCategories();
   const { theme, season } = useTheme();
   const cfg = theme === "season" ? SEASON_CONFIG[season] : null;
 
@@ -67,7 +69,7 @@ export function CategoryBudgetPanel({
   const globalWarn = varBudget > 0 && globalPct >= 80 && !globalOver;
 
   // Categories with spending or a set budget
-  const activeCats = CATEGORIES.filter(
+  const activeCats = categories.filter(
     c => spending[c] > 0 || budgets.find(b => b.category === c)
   );
 
@@ -240,7 +242,7 @@ export function CategoryBudgetPanel({
           )}
 
           {/* ── Add category not yet visible ──────────────────────────────── */}
-          {CATEGORIES.filter(c => !activeCats.includes(c)).length > 0 && (
+          {categories.filter(c => !activeCats.includes(c)).length > 0 && (
             <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-800">
               <select
                 className="input-base text-xs w-full"
@@ -248,7 +250,7 @@ export function CategoryBudgetPanel({
                 onChange={e => { if (e.target.value) startEdit(e.target.value as Category, 0); }}
               >
                 <option value="">+ Añadir límite a otra categoría...</option>
-                {CATEGORIES.filter(c => !activeCats.includes(c)).map(c => (
+                {categories.filter(c => !activeCats.includes(c)).map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
