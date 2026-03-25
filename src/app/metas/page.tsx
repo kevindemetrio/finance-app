@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur, getAvgMonthlySavings } from "../lib/data";
+import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
+
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
@@ -17,14 +17,13 @@ const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"
 type EditMode = "add_saved" | "edit_goal";
 
 export default function MetasPage() {
-  const router = useRouter();
   const [goals, setGoals]     = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [avgSavings, setAvgSavings] = useState(0);
   const [adding, setAdding]   = useState(false);
   const [editingId, setEditingId]     = useState<string | null>(null);
   const [editMode, setEditMode]       = useState<EditMode>("add_saved");
   const [addAmount, setAddAmount]     = useState<Record<string, string>>({});
+  const [addDirection, setAddDirection] = useState<Record<string, "add" | "sub">>({});
   const [userEmail, setUserEmail]     = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const { settings, update: updateSettings } = useUserSettings();
@@ -39,12 +38,12 @@ export default function MetasPage() {
   const [editName, setEditName]     = useState("");
   const [editTarget, setEditTarget] = useState("");
   const [editDate, setEditDate]     = useState("");
+  const [editColor, setEditColor]   = useState(GOAL_COLORS[0]);
 
   const reload = useCallback(() => loadGoals().then(setGoals), []);
 
   useEffect(() => {
     reload().then(() => setLoading(false));
-    getAvgMonthlySavings().then(setAvgSavings);
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
@@ -61,10 +60,12 @@ export default function MetasPage() {
   async function handleAddSaved(goal: Goal) {
     const a = parseFloat(addAmount[goal.id] || "0");
     if (isNaN(a) || a === 0) return;
-    await updateGoal(goal.id, { savedAmount: goal.savedAmount + a });
+    const dir = addDirection[goal.id] ?? "add";
+    const delta = dir === "sub" ? -a : a;
+    await updateGoal(goal.id, { savedAmount: goal.savedAmount + delta });
     setAddAmount(p => ({ ...p, [goal.id]: "" }));
     setEditingId(null);
-    toast("Ahorro registrado");
+    toast(dir === "sub" ? "Retirada registrada" : "Ahorro registrado");
     reload();
   }
 
@@ -75,6 +76,7 @@ export default function MetasPage() {
       name: editName.trim(),
       targetAmount: target,
       deadline: editDate || undefined,
+      color: editColor,
     });
     setEditingId(null);
     toast("Meta actualizada");
@@ -89,19 +91,18 @@ export default function MetasPage() {
     reload();
   }
 
-  function openEdit(goal: Goal, mode: EditMode) {
+  function openEdit(goal: Goal, mode: EditMode, dir?: "add" | "sub") {
     setEditingId(goal.id);
     setEditMode(mode);
+    if (mode === "add_saved" && dir) {
+      setAddDirection(p => ({ ...p, [goal.id]: dir }));
+    }
     if (mode === "edit_goal") {
       setEditName(goal.name);
       setEditTarget(String(goal.targetAmount));
       setEditDate(goal.deadline ?? "");
+      setEditColor(goal.color ?? GOAL_COLORS[0]);
     }
-  }
-
-  async function handleLogout() {
-    await createClient().auth.signOut();
-    router.push("/auth/login"); router.refresh();
   }
 
   return (
@@ -129,7 +130,6 @@ export default function MetasPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
-                  onLogout={handleLogout}
                   onClose={() => setShowSettings(false)}
                 />
               )}
@@ -219,7 +219,8 @@ export default function MetasPage() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
                       <span className="text-base font-bold mr-1" style={{ color: goal.color }}>{pct}%</span>
-                      <IconButton onClick={() => openEdit(goal, "add_saved")} title="Añadir ahorro"><PlusIcon /></IconButton>
+                      <IconButton onClick={() => openEdit(goal, "add_saved", "sub")} title="Retirar"><MinusIcon /></IconButton>
+                      <IconButton onClick={() => openEdit(goal, "add_saved", "add")} title="Añadir ahorro"><PlusIcon /></IconButton>
                       <IconButton onClick={() => openEdit(goal, "edit_goal")} title="Editar meta"><PencilIcon /></IconButton>
                       <IconButton danger onClick={() => handleDelete(goal.id)}><XIcon /></IconButton>
                     </div>
@@ -235,22 +236,11 @@ export default function MetasPage() {
                       : <span>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</span>}
                     {goal.deadline && <span>Límite: {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</span>}
                   </div>
-                  {!done && avgSavings > 0 && (() => {
-                    const remaining = goal.targetAmount - goal.savedAmount;
-                    const months = Math.ceil(remaining / avgSavings);
-                    const arrival = new Date();
-                    arrival.setMonth(arrival.getMonth() + months);
-                    const label = arrival.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
-                    return (
-                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                        A este ritmo, en <span className="font-semibold" style={{ color: goal.color }}>{label}</span> ({months} mes{months !== 1 ? "es" : ""})
-                      </p>
-                    );
-                  })()}
-
                   {editingId === goal.id && editMode === "add_saved" && (
                     <div className="flex gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800 mt-2">
-                      <TextInput type="number" placeholder="Añadir € guardados" step="0.01"
+                      <TextInput type="number"
+                        placeholder={addDirection[goal.id] === "sub" ? "Retirar €..." : "Añadir € guardados"}
+                        step="0.01"
                         value={addAmount[goal.id] || ""}
                         onChange={e => setAddAmount(p => ({ ...p, [goal.id]: e.target.value }))}
                         className="flex-1" autoFocus
@@ -267,10 +257,20 @@ export default function MetasPage() {
                         <TextInput value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nombre" autoFocus />
                         <TextInput type="number" value={editTarget} onChange={e => setEditTarget(e.target.value)} placeholder="Objetivo €" />
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         <TextInput type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="flex-1" />
-                        <SaveButton onClick={() => handleSaveGoalEdit(goal)} />
+                        <div className="flex gap-1.5">
+                          {GOAL_COLORS.map(c => (
+                            <button key={c} onClick={() => setEditColor(c)}
+                              className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                              style={{ background: c, outline: editColor === c ? `2px solid ${c}` : "none", outlineOffset: 2 }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
                         <GhostButton onClick={() => setEditingId(null)}>✕</GhostButton>
+                        <SaveButton onClick={() => handleSaveGoalEdit(goal)} />
                       </div>
                     </div>
                   )}
@@ -287,6 +287,7 @@ export default function MetasPage() {
 function GearIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }
+function MinusIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
 function PlusIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>; }
 function PencilIcon() { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>; }
 function XIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>; }

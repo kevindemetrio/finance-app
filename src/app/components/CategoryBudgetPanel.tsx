@@ -22,6 +22,7 @@ const CAT_COLORS: Record<string, string> = {
   "Ropa": "#993556",        "Regalos": "#993556", "Educación": "#3B6D11",
   "Viajes": "#854F0B",      "Otro": "#5F5E5A",
 };
+const DEFAULT_CAT_COLOR = "#5F5E5A";
 
 function Bar({ pct, over, warn }: { pct: number; over: boolean; warn: boolean }) {
   const color = over ? "bg-brand-red" : warn ? "bg-brand-amber" : "bg-brand-green";
@@ -96,11 +97,10 @@ export function CategoryBudgetPanel({
     setEditVal(currentVal > 0 ? String(currentVal) : "");
   }
 
-  // Summary for collapsed header
   const definedCount = budgets.length + (varBudget > 0 ? 1 : 0);
 
   return (
-    <div className="card mb-4 mt-4" style={cfg ? { background: cfg.cardBg, borderColor: cfg.cardBorder } : undefined}>
+    <div className="card mb-4 mt-4" data-tour="budget-panel" style={cfg ? { background: cfg.cardBg, borderColor: cfg.cardBorder } : undefined}>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <button
         type="button" onClick={toggle}
@@ -187,7 +187,7 @@ export function CategoryBudgetPanel({
                 const pct    = budget > 0 ? Math.round((spent / budget) * 100) : 0;
                 const over   = budget > 0 && spent > budget;
                 const warn   = budget > 0 && pct >= 80 && !over;
-                const accent = CAT_COLORS[cat] || "#5F5E5A";
+                const accent = CAT_COLORS[cat] || DEFAULT_CAT_COLOR;
                 const isEd   = editingCat === cat;
 
                 return (

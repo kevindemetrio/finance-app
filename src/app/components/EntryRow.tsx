@@ -10,6 +10,7 @@ interface Props {
   entry: Entry;
   sign: "+" | "−";
   colorClass: string;
+  accentHex?: string;
   showPaid?: boolean;
   showCategory?: boolean;
   showDate?: boolean;
@@ -43,7 +44,7 @@ export function CategoryBadge({ cat }: { cat: string }) {
   );
 }
 
-export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, showDate = true, showNotes = true, showName = true, onUpdate, onDelete }: Props) {
+export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCategory, showDate = true, showNotes = true, showName = true, onUpdate, onDelete }: Props) {
   const { categories } = useCategories();
   const [editing, setEditing]   = useState(false);
   const [name, setName]         = useState(entry.name);
@@ -55,7 +56,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, show
 
   function handleSave() {
     const a = parseFloat(amount);
-    if (!name.trim() || isNaN(a) || a <= 0) return;
+    if (!name.trim() || isNaN(a)) return;
     onUpdate({ ...entry, name: name.trim(), amount: a, date, paid, category: category as Category || undefined, notes: notes.trim() || undefined });
     setEditing(false);
     toast("Movimiento actualizado");
@@ -67,6 +68,19 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, show
     setCategory(entry.category ?? ""); setNotes(entry.notes ?? "");
     setEditing(false);
   }
+
+  async function handleDelete() {
+    const ok = await new Promise<boolean>(resolve => {
+      const confirmed = window.confirm(`¿Eliminar "${entry.name}"?`);
+      resolve(confirmed);
+    });
+    if (ok) onDelete();
+  }
+
+  // B5: negative amount display
+  const displaySign   = sign === "+" && entry.amount < 0 ? "−" : sign;
+  const displayAmount = Math.abs(entry.amount);
+  const displayColor  = sign === "+" && entry.amount < 0 ? "text-brand-red" : (accentHex ? "" : colorClass);
 
   return (
     <div>
@@ -86,18 +100,24 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, show
         {showPaid && (
           <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
         )}
-        <span className={`font-semibold text-right w-20 shrink-0 ${colorClass}`}>{sign}{fmtEur(entry.amount)}</span>
+        <span
+          className={`font-semibold text-right w-20 shrink-0 ${displayColor}`}
+          style={accentHex && entry.amount >= 0 ? { color: accentHex } : undefined}
+        >
+          {displaySign}{fmtEur(displayAmount)}
+        </span>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
           <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-          <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
+          <IconButton danger onClick={handleDelete} title="Eliminar"><XIcon /></IconButton>
         </div>
       </div>
 
       {editing && (
         <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/40
-          border-b border-neutral-100 dark:border-neutral-800">
+          border-l-2 border-brand-blue border-b border-neutral-100 dark:border-neutral-800">
+          <p className="w-full text-xs font-medium text-brand-blue mb-1">Editando: {entry.name}</p>
           <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Descripción" className="flex-1 min-w-[120px]" />
-          <TextInput type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Importe €" min="0" step="0.01" className="w-28" />
+          <TextInput type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Importe €" step="0.01" className="w-28" />
           <TextInput type="date" value={date} onChange={e => setDate(e.target.value)} className="w-36" />
           {showCategory && (
             <select value={category} onChange={e => setCategory(e.target.value)} className="input-base w-36">
@@ -113,7 +133,7 @@ export function EntryRow({ entry, sign, colorClass, showPaid, showCategory, show
           )}
           <TextInput value={notes} onChange={e => setNotes(e.target.value)} placeholder="Nota (opcional)..." className="w-full" />
           <SaveButton onClick={handleSave} />
-          <GhostButton onClick={handleCancel}>✕</GhostButton>
+          <GhostButton onClick={handleCancel}>Cancelar</GhostButton>
         </div>
       )}
     </div>

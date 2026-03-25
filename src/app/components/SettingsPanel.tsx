@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   SectionKey, SectionPrefs, UserSettings, SECTION_LABELS, SECTION_AVAILABLE_FIELDS,
 } from "../lib/userSettings";
@@ -12,7 +13,6 @@ interface Props {
   settings: UserSettings;
   onUpdate: (fn: (prev: UserSettings) => UserSettings) => void;
   onOpenTemplate?: () => void;
-  onLogout: () => void;
   onClose: () => void;
 }
 
@@ -24,8 +24,9 @@ const ALL_FIELD_LABELS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "showPaid",     label: "Estado de pago" },
 ];
 
-export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, onLogout, onClose }: Props) {
+export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
 
@@ -89,11 +90,9 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
     >
       {/* ── Top bar: title + close ───────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-            Ajustes
-          </span>
-        </div>
+        <span className="text-xs font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+          Ajustes rápidos
+        </span>
         <button
           onClick={onClose}
           className="w-6 h-6 flex items-center justify-center rounded-lg
@@ -108,32 +107,30 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
       {/* ── User section ────────────────────────────────────────────── */}
       <div className="mx-3 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
         <div className="px-3 py-3 flex items-center gap-3">
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full shrink-0 select-none
             bg-gradient-to-br from-brand-blue-light to-blue-100 dark:from-blue-950 dark:to-blue-900
             flex items-center justify-center
-            shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(55,138,221,0.2)]
-            dark:shadow-none">
+            shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(55,138,221,0.2)]">
             <span className="text-sm font-black text-brand-blue">{initial}</span>
           </div>
-          {/* Email */}
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">Cuenta</p>
             <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate leading-none">{userEmail || "—"}</p>
           </div>
         </div>
-        {/* Logout inside user card */}
+        {/* Link to full settings */}
         <button
-          onClick={onLogout}
+          onClick={() => { router.push("/ajustes"); onClose(); }}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium
             text-neutral-500 dark:text-neutral-500
-            hover:bg-red-50 dark:hover:bg-red-950/40
-            hover:text-brand-red dark:hover:text-red-400
+            hover:bg-neutral-100 dark:hover:bg-neutral-700/50
+            hover:text-neutral-800 dark:hover:text-neutral-200
             border-t border-neutral-100 dark:border-neutral-700/50
             transition-colors"
         >
-          <LogoutIcon />
-          Cerrar sesión
+          <SettingsLinkIcon />
+          Gestionar cuenta y ajustes
+          <svg className="w-3 h-3 ml-auto text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
 
@@ -232,13 +229,9 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
                           className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm
                             transition-colors text-left
                             ${fi < fieldLabels.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}
-                            ${on
-                              ? "hover:bg-white dark:hover:bg-neutral-700/60"
-                              : "hover:bg-neutral-100 dark:hover:bg-neutral-700/40"
-                            }`}
+                            hover:bg-white dark:hover:bg-neutral-700/60`}
                         >
-                          {/* Toggle pill */}
-                          <div className={`relative w-8 h-4.5 h-[18px] rounded-full transition-all shrink-0
+                          <div className={`relative w-8 h-[18px] rounded-full transition-all shrink-0
                             ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}
                           >
                             <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all
@@ -294,9 +287,6 @@ function ActionRow({ icon, label, onClick, disabled }: {
 function XIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 }
-function LogoutIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-}
 function KeyIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>;
 }
@@ -314,4 +304,7 @@ function OrderIcon() {
 }
 function EyeIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+}
+function SettingsLinkIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 }

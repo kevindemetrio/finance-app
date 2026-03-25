@@ -9,6 +9,7 @@ interface Props {
   title: string;
   dotColor: string;
   totalColor: string;
+  accentHex?: string;
   sign: "+" | "−";
   entries: Entry[];
   showPaid?: boolean;
@@ -20,15 +21,16 @@ interface Props {
   headerAfter?: React.ReactNode;
   bodyHeader?: React.ReactNode;
   storageKey: string;
+  tourId?: string;
   onAdd: (entry: Entry) => void;
   onUpdate: (idx: number, updated: Entry) => void;
   onDelete: (idx: number) => void;
 }
 
 export function Section({
-  title, dotColor, totalColor, sign, entries, showPaid, showCategory,
+  title, dotColor, totalColor, accentHex, sign, entries, showPaid, showCategory,
   showDate, showNotes, showName,
-  emptyMessage, headerAfter, bodyHeader, storageKey, onAdd, onUpdate, onDelete,
+  emptyMessage, headerAfter, bodyHeader, storageKey, tourId, onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
   const [open, setOpen]          = useState(true);
@@ -48,6 +50,10 @@ export function Section({
 
   const total = entries.reduce((a, i) => a + i.amount, 0);
 
+  // Handle negative totals gracefully (e.g. savings with withdrawals)
+  const shownTotal = sign === "−" ? Math.abs(total) : total;
+  const shownSign  = sign === "+" && total < 0 ? "" : sign;
+
   return (
     <>
       {showModal && (
@@ -57,14 +63,17 @@ export function Section({
         />
       )}
 
-      <div className="card">
+      <div className="card" {...(tourId ? { "data-tour": tourId } : {})}>
         <button type="button" onClick={toggle}
           className="w-full flex items-center justify-between px-4 py-4
             border-b border-neutral-100 dark:border-neutral-800
             hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors"
         >
           <div className="flex items-center gap-2.5">
-            <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
+            <span
+              className={accentHex ? "w-2.5 h-2.5 rounded-full" : `w-2.5 h-2.5 rounded-full ${dotColor}`}
+              style={accentHex ? { background: accentHex } : undefined}
+            />
             <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{title}</span>
             {entries.length > 0 && (
               <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-600
@@ -74,7 +83,12 @@ export function Section({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-semibold ${totalColor}`}>{sign}{fmtEur(total)}</span>
+            <span
+              className={`text-sm font-semibold ${accentHex ? "" : totalColor}`}
+              style={accentHex ? { color: accentHex } : undefined}
+            >
+              {shownSign}{fmtEur(shownTotal)}
+            </span>
             <svg className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
               viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
@@ -87,9 +101,9 @@ export function Section({
             {headerAfter}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
               <button onClick={() => setShowModal(true)}
-                className="flex items-center gap-1.5 text-sm font-medium text-brand-blue
-                  bg-brand-blue-light dark:bg-blue-950/60
-                  rounded-xl px-3 py-1.5 hover:bg-blue-100 dark:hover:bg-blue-950 transition-colors"
+                className={`flex items-center gap-1.5 text-sm font-medium rounded-xl px-3 py-1.5 transition-colors
+                  ${!accentHex ? "text-brand-blue bg-brand-blue-light dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-950" : ""}`}
+                style={accentHex ? { color: accentHex, background: `${accentHex}18` } : undefined}
               >
                 <PlusIcon /> Añadir
               </button>
@@ -116,7 +130,8 @@ export function Section({
                   .map((entry, idx) => ({ entry, idx }))
                   .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
                   .map(({ entry, idx }) => (
-                    <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={totalColor}
+                    <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={accentHex ? "" : totalColor}
+                      accentHex={accentHex}
                       showPaid={showPaid} showCategory={showCategory}
                       showDate={showDate} showNotes={showNotes} showName={showName}
                       onUpdate={updated => onUpdate(idx, updated)}

@@ -12,11 +12,13 @@ const links = [
   {
     href: "/metas",
     label: "Metas",
+    tourId: "nav-metas",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
   },
   {
     href: "/inversiones",
     label: "Inversiones",
+    tourId: "nav-inversiones",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
   },
   {
@@ -29,26 +31,25 @@ const links = [
 export function Navbar() {
   const pathname = usePathname();
   return (
-    <>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden
-        bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md
-        border-t border-neutral-200 dark:border-neutral-800
-        pb-[env(safe-area-inset-bottom)]">
-        <div className="flex">
-          {links.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link key={link.href} href={link.href}
-                className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors
-                  ${active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-400 dark:text-neutral-600"}`}>
-                <span className={active ? "opacity-100" : "opacity-40"}>{link.icon}</span>
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden
+      bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md
+      border-t border-neutral-200 dark:border-neutral-800
+      pb-[env(safe-area-inset-bottom)]">
+      <div className="flex">
+        {links.map((link) => {
+          const active = pathname === link.href;
+          return (
+            <Link key={link.href} href={link.href}
+              {...(link.tourId ? { "data-tour": link.tourId } : {})}
+              className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors
+                ${active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-400 dark:text-neutral-600"}`}>
+              <span className={active ? "opacity-100" : "opacity-40"}>{link.icon}</span>
+              {link.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
@@ -60,6 +61,7 @@ export function DesktopTabs() {
         const active = pathname === link.href;
         return (
           <Link key={link.href} href={link.href}
+            {...(link.tourId ? { "data-tour": link.tourId } : {})}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
               ${active ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"}`}>
             {link.icon}

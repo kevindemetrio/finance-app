@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Investment, InvestmentCategory, CATEGORY_COLORS, CATEGORY_LABELS,
   groupByCategory, loadInvestments, totalContributions,
@@ -26,7 +25,6 @@ const ACCENT_STYLE: Record<InvestmentCategory, string> = {
 };
 
 export default function InversionesPage() {
-  const router = useRouter();
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,12 +55,6 @@ export default function InversionesPage() {
       if (data.user?.email) setUserEmail(data.user.email);
     });
   }, [load]);
-
-  async function handleLogout() {
-    await createClient().auth.signOut();
-    router.push("/auth/login");
-    router.refresh();
-  }
 
   const { theme, season } = useTheme();
   const isSeason = theme === "season";
@@ -99,7 +91,6 @@ export default function InversionesPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
-                  onLogout={handleLogout}
                   onClose={() => setShowSettings(false)}
                 />
               )}

@@ -7,194 +7,444 @@ import { createCategory, deleteCategory, loadCategories } from "../lib/data";
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
-import { SettingsPanel } from "../components/SettingsPanel";
+import { TemplateManager } from "../components/TemplateManager";
 import { toast, confirm } from "../components/Toast";
-import { PrimaryButton, TextInput } from "../components/ui";
+import { GhostButton, PrimaryButton, SaveButton, TextInput } from "../components/ui";
 import { useCategories } from "../components/CategoriesProvider";
-import { useUserSettings } from "../lib/userSettings";
+
+const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
+const SECTION_COLOR_PRESETS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30","#5F5E5A"];
+
+const SECTION_LABELS: Record<string, string> = {
+  incomes: "Ingresos",
+  savings: "Ahorros",
+  fixedExpenses: "Gastos fijos",
+  varExpenses: "Gastos variables",
+};
+const SECTION_KEYS = ["incomes", "savings", "fixedExpenses", "varExpenses"];
 
 export default function AjustesPage() {
   const router = useRouter();
-  const [userEmail, setUserEmail] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
-  const { settings, update: updateSettings } = useUserSettings();
 
-  // Local categories state for this page
+  // ── CUENTA ──────────────────────────────────────────────────────────────
+  const [userEmail, setUserEmail] = useState("");
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
+
+  // ── FINANZAS — categories ───────────────────────────────────────────────
   const { reloadCategories: reloadCtx } = useCategories();
   const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newName, setNewName] = useState("");
-  const [adding, setAdding] = useState(false);
+  const [catsLoading, setCatsLoading] = useState(true);
+  const [newCatName, setNewCatName] = useState("");
+  const [addingCat, setAddingCat] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
+
+  // ── FINANZAS — section colors ───────────────────────────────────────────
+  const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
+
+  // ── METAS ───────────────────────────────────────────────────────────────
+  const [defaultGoalColor, setDefaultGoalColor] = useState(GOAL_COLORS[0]);
+
+  // ── INVERSIONES accordion ───────────────────────────────────────────────
+  const [invOpen, setInvOpen] = useState<string | null>(null);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
-    loadCategories().then(cats => { setCategories(cats); setLoading(false); });
+    loadCategories().then(cats => { setCategories(cats); setCatsLoading(false); });
+
+    // Load section colors from localStorage
+    const colors: Record<string, string> = {};
+    for (const k of SECTION_KEYS) {
+      const c = localStorage.getItem(`section_color_${k}`);
+      if (c) colors[k] = c;
+    }
+    setSectionColors(colors);
+
+    // Load default goal color
+    const dgc = localStorage.getItem("default_goal_color");
+    if (dgc) setDefaultGoalColor(dgc);
   }, []);
 
+  // ── CUENTA handlers ──────────────────────────────────────────────────────
   async function handleLogout() {
     await createClient().auth.signOut();
     router.push("/auth/login");
     router.refresh();
   }
 
-  async function handleAdd() {
-    const name = newName.trim();
+  async function handleChangePassword() {
+    if (!newPw || newPw.length < 6) { toast("Mínimo 6 caracteres", "error"); return; }
+    if (newPw !== confirmPw) { toast("Las contraseñas no coinciden", "error"); return; }
+    setSavingPw(true);
+    const { error } = await createClient().auth.updateUser({ password: newPw });
+    setSavingPw(false);
+    if (error) { toast(error.message, "error"); return; }
+    toast("Contraseña actualizada");
+    setNewPw(""); setConfirmPw(""); setShowPwForm(false);
+  }
+
+  // ── FINANZAS — category handlers ─────────────────────────────────────────
+  async function handleAddCat() {
+    const name = newCatName.trim();
     if (!name) return;
     if (name.length > 30) { toast("Máximo 30 caracteres", "error"); return; }
     if (categories.some(c => c.toLowerCase() === name.toLowerCase())) {
-      toast("Esa categoría ya existe", "error");
-      return;
+      toast("Esa categoría ya existe", "error"); return;
     }
-    setAdding(true);
+    setAddingCat(true);
     await createCategory(name);
     const updated = await loadCategories();
-    setCategories(updated);
-    reloadCtx();
-    setNewName("");
-    setAdding(false);
+    setCategories(updated); reloadCtx(); setNewCatName(""); setAddingCat(false);
     toast("Categoría añadida");
   }
 
-  async function handleDelete(name: string) {
-    if (categories.length <= 1) {
-      toast("Debe haber al menos una categoría", "error");
-      return;
-    }
+  async function handleDeleteCat(name: string) {
+    if (categories.length <= 1) { toast("Debe haber al menos una categoría", "error"); return; }
     const ok = await confirm({
       title: `¿Eliminar "${name}"?`,
-      message: "Los movimientos asociados no se borrarán, pero quedarán sin categoría.",
+      message: "Los movimientos asociados quedarán sin categoría.",
       danger: true,
     });
     if (!ok) return;
     await deleteCategory(name);
     const updated = await loadCategories();
-    setCategories(updated);
-    reloadCtx();
+    setCategories(updated); reloadCtx();
     toast("Categoría eliminada", "info");
   }
+
+  // ── FINANZAS — section color handlers ────────────────────────────────────
+  function handleSectionColor(key: string, color: string | null) {
+    const next = { ...sectionColors };
+    if (color) next[key] = color;
+    else delete next[key];
+    setSectionColors(next);
+    if (color) localStorage.setItem(`section_color_${key}`, color);
+    else localStorage.removeItem(`section_color_${key}`);
+    window.dispatchEvent(new Event("section-colors-updated"));
+  }
+
+  // ── METAS — default color ─────────────────────────────────────────────────
+  function handleDefaultGoalColor(color: string) {
+    setDefaultGoalColor(color);
+    localStorage.setItem("default_goal_color", color);
+  }
+
+  // ── METAS — restart tour ─────────────────────────────────────────────────
+  function handleRestartTour() {
+    localStorage.removeItem("tour_completed");
+    router.push("/");
+  }
+
+  // ── INV categories ────────────────────────────────────────────────────────
+  const INV_CATS = [
+    { key: "emergency", label: "Fondo de emergencia", color: "#1D9E75",
+      desc: "Capital líquido para imprevistos. Cuentas de ahorro o depósitos de alta liquidez. Objetivo habitual: 3-6 meses de gastos." },
+    { key: "variable", label: "Renta variable", color: "#378ADD",
+      desc: "ETFs, fondos indexados, acciones individuales. Mayor rentabilidad esperada a largo plazo con mayor volatilidad." },
+    { key: "fixed", label: "Renta fija", color: "#BA7517",
+      desc: "Bonos, letras del Tesoro, depósitos a plazo. Menor riesgo y rendimiento predecible." },
+    { key: "stock", label: "Acciones directas", color: "#7F77DD",
+      desc: "Participación directa en empresas cotizadas. Requiere seguimiento activo y mayor tolerancia al riesgo." },
+  ];
 
   return (
     <SeasonWrapper>
       <Navbar />
+      {showTemplate && <TemplateManager onClose={() => setShowTemplate(false)} />}
+
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <DesktopTabs />
           <h1 className="text-lg font-medium lg:hidden">Ajustes</h1>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+          <ThemeToggle />
+        </div>
+
+        <div className="space-y-4">
+
+          {/* ── CUENTA ──────────────────────────────────────────────────── */}
+          <SettingsCard label="CUENTA" dot="bg-brand-blue">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-0.5">Correo</p>
+                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{userEmail || "—"}</p>
+              </div>
               <button
-                onClick={() => setShowSettings(v => !v)}
-                title="Ajustes"
-                className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors
-                  ${showSettings
-                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200"
-                    : "text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
+                onClick={() => setShowPwForm(v => !v)}
+                className="text-xs text-brand-blue hover:underline"
               >
-                <GearIcon />
+                Cambiar contraseña
               </button>
-              {showSettings && (
-                <SettingsPanel
-                  userEmail={userEmail}
-                  settings={settings}
-                  onUpdate={updateSettings}
-                  onLogout={handleLogout}
-                  onClose={() => setShowSettings(false)}
-                />
-              )}
             </div>
-          </div>
-        </div>
 
-        {/* Categorías */}
-        <div className="card">
-          <div className="px-4 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-brand-amber" />
-            <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-              Categorías de gastos
-            </h2>
-            {!loading && (
-              <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-600
-                bg-neutral-100 dark:bg-neutral-800 rounded-full px-1.5 py-0.5 leading-none">
-                {categories.length}
-              </span>
+            {showPwForm && (
+              <div className="px-4 pb-3 pt-1 space-y-2 border-t border-neutral-100 dark:border-neutral-800">
+                <TextInput
+                  type="password" value={newPw} onChange={e => setNewPw(e.target.value)}
+                  placeholder="Nueva contraseña (mín. 6 chars)" className="w-full"
+                />
+                <TextInput
+                  type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
+                  placeholder="Confirmar contraseña" className="w-full"
+                  onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+                />
+                <div className="flex gap-2 justify-end">
+                  <GhostButton onClick={() => { setShowPwForm(false); setNewPw(""); setConfirmPw(""); }}>
+                    Cancelar
+                  </GhostButton>
+                  <SaveButton onClick={handleChangePassword} disabled={savingPw}>
+                    {savingPw ? "Guardando..." : "Guardar"}
+                  </SaveButton>
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* Lista */}
-          <div className="bg-neutral-50/30 dark:bg-neutral-800/10">
-            {loading ? (
-              <div className="divide-y divide-neutral-100/70 dark:divide-neutral-800/50">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
-                    <div className="flex-1 h-4 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
-                    <div className="w-6 h-6 bg-neutral-100 dark:bg-neutral-800 rounded-lg animate-pulse" />
+            <div className="px-4 pb-3 border-t border-neutral-100 dark:border-neutral-800 pt-3">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-sm text-brand-red hover:text-red-700 transition-colors"
+              >
+                <LogoutIcon /> Cerrar sesión
+              </button>
+            </div>
+          </SettingsCard>
+
+          {/* ── APARIENCIA ──────────────────────────────────────────────── */}
+          <SettingsCard label="APARIENCIA" dot="bg-brand-amber">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tema</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Claro, oscuro o estacional</p>
+              </div>
+              <ThemeToggle />
+            </div>
+          </SettingsCard>
+
+          {/* ── FINANZAS ────────────────────────────────────────────────── */}
+          <SettingsCard label="FINANZAS" dot="bg-brand-green">
+
+            {/* Template manager */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plantilla de gastos fijos</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Define tus recurrentes para importarlos cada mes</p>
+              </div>
+              <button
+                onClick={() => setShowTemplate(true)}
+                className="text-xs text-brand-blue hover:underline shrink-0 ml-4"
+              >
+                Gestionar
+              </button>
+            </div>
+
+            {/* Section colors */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Colores de secciones</p>
+              <div className="space-y-3">
+                {SECTION_KEYS.map(key => (
+                  <div key={key} className="flex items-center gap-3">
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400 w-32 shrink-0">
+                      {SECTION_LABELS[key]}
+                    </span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {SECTION_COLOR_PRESETS.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => handleSectionColor(key, c)}
+                          className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                          style={{
+                            background: c,
+                            outline: sectionColors[key] === c ? `2px solid ${c}` : "none",
+                            outlineOffset: 2,
+                          }}
+                        />
+                      ))}
+                      {sectionColors[key] && (
+                        <button
+                          onClick={() => handleSectionColor(key, null)}
+                          className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 hover:text-neutral-600"
+                        >
+                          reset
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="divide-y divide-neutral-100/70 dark:divide-neutral-800/50">
-                {categories.map(cat => (
-                  <div key={cat} className="group flex items-center gap-3 px-4 py-3
-                    hover:bg-white dark:hover:bg-neutral-800/40 transition-colors">
-                    <CategoryDot name={cat} />
-                    <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{cat}</span>
-                    <button
-                      onClick={() => handleDelete(cat)}
-                      disabled={categories.length <= 1}
-                      className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg
-                        text-neutral-300 dark:text-neutral-700
-                        hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-brand-red
-                        disabled:cursor-not-allowed disabled:opacity-20
-                        transition-all"
-                      title="Eliminar categoría"
+            </div>
+
+            {/* Categories */}
+            <div>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 flex-1">
+                  Categorías de gastos
+                </p>
+                {!catsLoading && (
+                  <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-600
+                    bg-neutral-100 dark:bg-neutral-800 rounded-full px-1.5 py-0.5 leading-none">
+                    {categories.length}
+                  </span>
+                )}
+              </div>
+              <div className="bg-neutral-50/30 dark:bg-neutral-800/10">
+                {catsLoading ? (
+                  <div className="divide-y divide-neutral-100/70 dark:divide-neutral-800/50">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                        <div className="flex-1 h-3.5 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-neutral-100/70 dark:divide-neutral-800/50">
+                    {categories.map(cat => (
+                      <div key={cat} className="group flex items-center gap-3 px-4 py-2.5
+                        hover:bg-white dark:hover:bg-neutral-800/40 transition-colors">
+                        <CategoryDot name={cat} />
+                        <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{cat}</span>
+                        <button
+                          onClick={() => handleDeleteCat(cat)}
+                          disabled={categories.length <= 1}
+                          className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg
+                            text-neutral-300 dark:text-neutral-700
+                            hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-brand-red
+                            disabled:cursor-not-allowed disabled:opacity-20 transition-all"
+                          title="Eliminar categoría"
+                        >
+                          <XIcon />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 flex gap-2">
+                <TextInput
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value.slice(0, 30))}
+                  placeholder="Nueva categoría..."
+                  className="flex-1"
+                  onKeyDown={e => e.key === "Enter" && handleAddCat()}
+                />
+                <PrimaryButton onClick={handleAddCat} disabled={addingCat || !newCatName.trim()}>
+                  {addingCat ? "..." : "Añadir"}
+                </PrimaryButton>
+              </div>
+            </div>
+          </SettingsCard>
+
+          {/* ── METAS ───────────────────────────────────────────────────── */}
+          <SettingsCard label="METAS" dot="bg-brand-red">
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                Color por defecto para nuevas metas
+              </p>
+              <div className="flex gap-2">
+                {GOAL_COLORS.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => handleDefaultGoalColor(c)}
+                    className="w-6 h-6 rounded-full transition-transform hover:scale-110"
+                    style={{
+                      background: c,
+                      outline: defaultGoalColor === c ? `2px solid ${c}` : "none",
+                      outlineOffset: 2,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tour de bienvenida</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Vuelve a ver el recorrido por la app</p>
+              </div>
+              <button
+                onClick={handleRestartTour}
+                className="text-xs text-brand-blue hover:underline"
+              >
+                Ver tour
+              </button>
+            </div>
+          </SettingsCard>
+
+          {/* ── INVERSIONES ─────────────────────────────────────────────── */}
+          <SettingsCard label="INVERSIONES" dot="bg-[#7F77DD]">
+            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {INV_CATS.map(cat => (
+                <div key={cat.key}>
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors"
+                    onClick={() => setInvOpen(v => v === cat.key ? null : cat.key)}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
+                    <span className="flex-1 text-sm font-medium text-neutral-700 dark:text-neutral-300">{cat.label}</span>
+                    <svg
+                      className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 transition-transform ${invOpen === cat.key ? "rotate-180" : ""}`}
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                     >
-                      <XIcon />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  {invOpen === cat.key && (
+                    <p className="px-4 pb-3 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                      {cat.desc}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </SettingsCard>
 
-          {/* Añadir nueva categoría */}
-          <div className="px-4 py-3 border-t border-neutral-100 dark:border-neutral-800 flex gap-2">
-            <TextInput
-              value={newName}
-              onChange={e => setNewName(e.target.value.slice(0, 30))}
-              placeholder="Nueva categoría..."
-              className="flex-1"
-              onKeyDown={e => e.key === "Enter" && handleAdd()}
-            />
-            <PrimaryButton onClick={handleAdd} disabled={adding || !newName.trim()}>
-              {adding ? "..." : "Añadir"}
-            </PrimaryButton>
-          </div>
+          {/* ── AYUDA ───────────────────────────────────────────────────── */}
+          <SettingsCard label="AYUDA" dot="bg-neutral-400">
+            <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Versión</span>
+              <span className="text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 rounded-full px-2.5 py-1">
+                1.0.0
+              </span>
+            </div>
+            <div className="px-4 py-3">
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 leading-relaxed">
+                Tus datos se almacenan de forma segura en Supabase. No compartimos información personal con terceros.
+                Puedes exportar o eliminar tu cuenta desde la sección Cuenta.
+              </p>
+            </div>
+          </SettingsCard>
+
         </div>
-
       </div>
     </SeasonWrapper>
   );
 }
 
-// Genera un color de dot determinista a partir del nombre
-function CategoryDot({ name }: { name: string }) {
-  const PALETTE = [
-    "#1D9E75", "#378ADD", "#BA7517", "#E24B4A",
-    "#7F77DD", "#D85A30", "#993556", "#3B6D11",
-  ];
-  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length;
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+function SettingsCard({ label, dot, children }: { label: string; dot: string; children: React.ReactNode }) {
   return (
-    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PALETTE[idx] }} />
+    <div className="card overflow-hidden">
+      <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2.5 bg-neutral-50/50 dark:bg-neutral-800/20">
+        <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+        <span className="text-[10px] font-bold tracking-widest uppercase text-neutral-400 dark:text-neutral-500">{label}</span>
+      </div>
+      {children}
+    </div>
   );
 }
 
-function GearIcon() {
-  return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+function CategoryDot({ name }: { name: string }) {
+  const PALETTE = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30","#993556","#3B6D11"];
+  const idx = name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length;
+  return <span className="w-2 h-2 rounded-full shrink-0" style={{ background: PALETTE[idx] }} />;
+}
+
+function LogoutIcon() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
 }
 function XIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;

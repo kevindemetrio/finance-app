@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { loadAnnualData, loadCategoryData, fmtEur } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
 import { Navbar, DesktopTabs } from "../components/Navbar";
@@ -17,7 +16,6 @@ const CAT_COLORS = ['#E24B4A','#BA7517','#378ADD','#1D9E75','#7F77DD','#D85A30',
 type ChartType = "annual" | "cats" | "monthly";
 
 export default function DashboardPage() {
-  const router = useRouter();
   const today = new Date();
   const [year, setYear]     = useState(today.getFullYear());
   const [month, setMonth]   = useState(today.getMonth());
@@ -40,11 +38,6 @@ export default function DashboardPage() {
     Promise.all([loadAnnualData(year), loadCategoryData(year, month)])
       .then(([a, c]) => { setAnnual(a); setCatData(c); setLoading(false); });
   }, [year, month]);
-
-  async function handleLogout() {
-    await createClient().auth.signOut();
-    router.push("/auth/login"); router.refresh();
-  }
 
   const maxBalance = Math.max(...annual.map(m => Math.abs(m.balance)), 1);
   const maxIncome  = Math.max(...annual.map(m => m.income), 1);
@@ -80,7 +73,6 @@ export default function DashboardPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
-                  onLogout={handleLogout}
                   onClose={() => setShowSettings(false)}
                 />
               )}

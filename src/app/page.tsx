@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Entry, MonthData, CategoryBudget, getAllTimeSavings, getCarryover,
   loadMonth, saveEntry, deleteEntry, saveMonthConfig,
@@ -10,6 +9,7 @@ import {
 import { createClient } from "./lib/supabase/client";
 import { SummaryGrid } from "./components/SummaryGrid";
 import { Section } from "./components/Section";
+import { AddEntryModal } from "./components/AddEntryModal";
 import { MonthPicker } from "./components/MonthPicker";
 import { ThemeToggle, useTheme, SEASON_CONFIG } from "./components/ThemeProvider";
 import { Navbar, DesktopTabs } from "./components/Navbar";
@@ -20,6 +20,7 @@ import { CategoryBudgetPanel } from "./components/CategoryBudgetPanel";
 import { toast, confirm as confirmDialog } from "./components/Toast";
 import { PdfReportButton } from "./components/PdfReportButton";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { AppTour } from "./components/AppTour";
 import { useUserSettings, SectionKey } from "./lib/userSettings";
 
 function emptyMonth(): MonthData {
@@ -29,7 +30,6 @@ function emptyMonth(): MonthData {
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export default function HomePage() {
-  const router = useRouter();
   const { theme, season } = useTheme();
   const isSeason = theme === "season";
   const today = new Date();
@@ -47,6 +47,8 @@ export default function HomePage() {
   const [showTemplate, setShowTemplate] = useState(false);
   const [importing, setImporting]    = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showWithdrawSaving, setShowWithdrawSaving] = useState(false);
+  const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
   const { settings, update: updateSettings } = useUserSettings();
   const fetchId = useRef(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -55,6 +57,21 @@ export default function HomePage() {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
+  }, []);
+
+  useEffect(() => {
+    function loadColors() {
+      const keys = ["incomes", "savings", "fixedExpenses", "varExpenses"];
+      const colors: Record<string, string> = {};
+      for (const k of keys) {
+        const c = localStorage.getItem(`section_color_${k}`);
+        if (c) colors[k] = c;
+      }
+      setSectionColors(colors);
+    }
+    loadColors();
+    window.addEventListener("section-colors-updated", loadColors);
+    return () => window.removeEventListener("section-colors-updated", loadColors);
   }, []);
 
   useEffect(() => {
@@ -146,14 +163,21 @@ export default function HomePage() {
   function prevMonth() { if (month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1); }
   function nextMonth() { if (month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1); }
 
-  async function handleLogout() {
-    await createClient().auth.signOut();
-    router.push("/auth/login"); router.refresh();
-  }
-
   const varTotal = data.varExpenses.reduce((a,i) => a+i.amount, 0);
   const TYPE_LABEL: Record<string,string> = { income:"Ingreso", fixed:"Fijo", variable:"Variable", saving:"Ahorro" };
   const TYPE_COLOR: Record<string,string> = { income:"text-brand-green", fixed:"text-brand-amber", variable:"text-brand-red", saving:"text-brand-blue" };
+
+  // Savings withdraw button in body header
+  const savingsBodyHeader = (
+    <button
+      onClick={() => setShowWithdrawSaving(true)}
+      className="flex items-center gap-1.5 text-xs text-brand-red
+        border border-brand-red rounded-lg px-2.5 py-1.5
+        hover:bg-brand-red-light dark:hover:bg-red-950 transition-colors"
+    >
+      <WithdrawIcon /> Retirar
+    </button>
+  );
 
   // Template controls shown inside fixed expenses body
   const fixedBodyHeader = (
@@ -181,9 +205,17 @@ export default function HomePage() {
 
   return (
     <SeasonWrapper>
+      <AppTour />
       <Navbar />
 
       {showTemplate && <TemplateManager onClose={() => setShowTemplate(false)} />}
+      {showWithdrawSaving && (
+        <AddEntryModal
+          title="Retirar ahorro"
+          onAdd={e => { addSaving({ ...e, amount: -Math.abs(e.amount) }); setShowWithdrawSaving(false); }}
+          onClose={() => setShowWithdrawSaving(false)}
+        />
+      )}
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10">
         {/* Header */}
@@ -215,7 +247,6 @@ export default function HomePage() {
                   settings={settings}
                   onUpdate={updateSettings}
                   onOpenTemplate={() => setShowTemplate(true)}
-                  onLogout={handleLogout}
                   onClose={() => setShowSettings(false)}
                 />
               )}
@@ -324,26 +355,31 @@ export default function HomePage() {
                 };
                 if (key === "incomes") return (
                   <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
-                    entries={data.incomes} storageKey="incomes"
+                    entries={data.incomes} storageKey="incomes" tourId="income-section"
+                    accentHex={sectionColors["incomes"]}
                     showCategory={prefs.showCategory} showPaid={false} {...common}
                     onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
                 );
                 if (key === "savings") return (
                   <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
                     entries={data.savingsEntries} storageKey="savings"
+                    accentHex={sectionColors["savings"]}
                     showCategory={prefs.showCategory} showPaid={false} {...common}
+                    bodyHeader={savingsBodyHeader}
                     onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
                 );
                 if (key === "fixedExpenses") return (
                   <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
-                    entries={data.fixedExpenses} storageKey="fixed"
+                    entries={data.fixedExpenses} storageKey="fixed" tourId="fixed-section"
+                    accentHex={sectionColors["fixedExpenses"]}
                     showPaid={prefs.showPaid} showCategory={prefs.showCategory} {...common}
                     bodyHeader={fixedBodyHeader}
                     onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
                 );
                 return (
                   <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
-                    entries={data.varExpenses} storageKey="variable"
+                    entries={data.varExpenses} storageKey="variable" tourId="var-section"
+                    accentHex={sectionColors["varExpenses"]}
                     showCategory={prefs.showCategory} showPaid={prefs.showPaid} {...common}
                     onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
                 );
@@ -357,8 +393,8 @@ export default function HomePage() {
   );
 }
 
-function LogoutIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+function WithdrawIcon() {
+  return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>;
 }
 function GearIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;

@@ -25,7 +25,7 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
   }, [data]);
 
   return (
-    <div className="mb-5">
+    <div className="mb-5" data-tour="summary">
       {isPastMonth && (
         <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
           <span className="text-amber-500 text-xs">◷</span>

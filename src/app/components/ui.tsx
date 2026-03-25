@@ -6,7 +6,7 @@ export function IconButton({ danger, className = "", children, ...props }: Butto
   return (
     <button
       type="button"
-      className={`btn-icon ${danger ? "hover:bg-red-50 dark:hover:bg-red-950 hover:text-brand-red" : ""} ${className}`}
+      className={`w-9 h-9 btn-icon ${danger ? "hover:bg-red-50 dark:hover:bg-red-950 hover:text-brand-red" : ""} ${className}`}
       {...props}
     >
       {children}
