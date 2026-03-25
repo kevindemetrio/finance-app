@@ -8,11 +8,15 @@ import {
 import { createClient } from "../lib/supabase/client";
 import { toast } from "./Toast";
 
+interface PageOrderItem { id: string; label: string; color?: string; }
+interface PageOrderConfig { title: string; items: PageOrderItem[]; onMove: (id: string, dir: -1 | 1) => void; }
+
 interface Props {
   userEmail: string;
   settings: UserSettings;
   onUpdate: (fn: (prev: UserSettings) => UserSettings) => void;
   onOpenTemplate?: () => void;
+  pageOrder?: PageOrderConfig;
   onClose: () => void;
 }
 
@@ -24,7 +28,7 @@ const ALL_FIELD_LABELS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "showPaid",     label: "Estado de pago" },
 ];
 
-export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, onClose }: Props) {
+export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, pageOrder, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
@@ -143,6 +147,41 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, o
             onClick={() => { onOpenTemplate(); onClose(); }} />
         )}
       </div>
+
+      {/* ── Page-specific order (metas / inversiones) ───────────────── */}
+      {pageOrder && (
+        <>
+          <div className="mx-3 h-px bg-neutral-100 dark:bg-neutral-800 mb-3" />
+          <div className="px-4 mb-3">
+            <PanelSectionTitle icon={<OrderIcon />}>{pageOrder.title}</PanelSectionTitle>
+            <div className="space-y-0.5 mt-2">
+              {pageOrder.items.map((item, i) => (
+                <div key={item.id} className="flex items-center gap-2 py-1 group rounded-lg px-1 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  {item.color
+                    ? <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />
+                    : <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
+                  }
+                  <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300 truncate">{item.label}</span>
+                  <div className="flex opacity-40 group-hover:opacity-100 transition-opacity gap-0.5">
+                    <button onClick={() => pageOrder.onMove(item.id, -1)} disabled={i === 0}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-500
+                        hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700
+                        disabled:opacity-25 transition-all">
+                      <ChevronUpIcon />
+                    </button>
+                    <button onClick={() => pageOrder.onMove(item.id, 1)} disabled={i === pageOrder.items.length - 1}
+                      className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-500
+                        hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700
+                        disabled:opacity-25 transition-all">
+                      <ChevronDownIcon />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Divider ─────────────────────────────────────────────────── */}
       <div className="mx-3 h-px bg-neutral-100 dark:bg-neutral-800 mb-3" />

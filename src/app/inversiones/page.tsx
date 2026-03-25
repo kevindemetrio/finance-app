@@ -17,12 +17,19 @@ import { useUserSettings } from "../lib/userSettings";
 const DEFAULT_CAT_ORDER: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
 const INV_ORDER_KEY = "investment_cat_order";
 
-// Color accent per investment category (left border)
+const CAT_HEX: Record<InvestmentCategory, string> = {
+  emergency: "#378ADD",
+  variable:  "#1D9E75",
+  fixed:     "#BA7517",
+  stock:     "#E24B4A",
+};
+
+// Left border matches CATEGORY_COLORS text color for coherence
 const ACCENT_STYLE: Record<InvestmentCategory, string> = {
-  emergency: "border-l-brand-green",
-  variable:  "border-l-brand-blue",
+  emergency: "border-l-brand-blue",
+  variable:  "border-l-brand-green",
   fixed:     "border-l-brand-amber",
-  stock:     "border-l-[#7F77DD]",
+  stock:     "border-l-brand-red",
 };
 
 export default function InversionesPage() {
@@ -107,6 +114,11 @@ export default function InversionesPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
+                  pageOrder={{
+                    title: "Orden de categorías",
+                    items: catOrder.map(cat => ({ id: cat, label: CATEGORY_LABELS[cat], color: CAT_HEX[cat] })),
+                    onMove: (id, dir) => moveCat(id as InvestmentCategory, dir),
+                  }}
                   onClose={() => setShowSettings(false)}
                 />
               )}
@@ -116,11 +128,11 @@ export default function InversionesPage() {
 
         {/* Summary cards + reorder */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-6">
-          {catOrder.map((cat, i) => {
+          {catOrder.map((cat) => {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
             return (
-              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]} relative group`}>
+              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]}`}>
                 <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold truncate">
                   {CATEGORY_LABELS[cat]}
                 </p>
@@ -128,18 +140,6 @@ export default function InversionesPage() {
                 <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
                   {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
                 </p>
-                <div className="absolute top-1.5 right-1.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => moveCat(cat, -1)} disabled={i === 0}
-                    className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all"
-                    title="Mover izquierda / arriba">
-                    <TinyChevLeftIcon />
-                  </button>
-                  <button onClick={() => moveCat(cat, 1)} disabled={i === catOrder.length - 1}
-                    className="w-5 h-5 flex items-center justify-center rounded text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all"
-                    title="Mover derecha / abajo">
-                    <TinyChevRightIcon />
-                  </button>
-                </div>
               </div>
             );
           })}
@@ -190,10 +190,4 @@ export default function InversionesPage() {
 
 function GearIcon() {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
-}
-function TinyChevLeftIcon() {
-  return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6"/></svg>;
-}
-function TinyChevRightIcon() {
-  return <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6"/></svg>;
 }

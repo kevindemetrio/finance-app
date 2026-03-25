@@ -137,9 +137,11 @@ export function CategoryBudgetPanel({
               </span>
               <button
                 onClick={() => startEdit("global", varBudget)}
-                className="text-xs text-brand-blue hover:underline transition-colors"
+                className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
+                  text-brand-blue bg-brand-blue-light dark:bg-blue-950/60
+                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
               >
-                {varBudget > 0 ? "Editar" : "Definir"}
+                {varBudget > 0 ? <><EditIcon />{" "}Editar</> : <><PlusSmIcon />{" "}Definir</>}
               </button>
             </div>
 
@@ -218,13 +220,14 @@ export function CategoryBudgetPanel({
                           )}
                           <button
                             onClick={() => startEdit(cat, budget)}
-                            className="text-neutral-300 dark:text-neutral-600 hover:text-neutral-500 dark:hover:text-neutral-400 transition-colors ml-1 shrink-0"
+                            className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md transition-colors ml-1 shrink-0
+                              ${budget > 0
+                                ? "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                : "text-brand-blue bg-brand-blue-light dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60"
+                              }`}
                             title={budget > 0 ? "Editar límite" : "Añadir límite"}
                           >
-                            {budget > 0
-                              ? <PencilIcon />
-                              : <span className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 whitespace-nowrap">+ límite</span>
-                            }
+                            {budget > 0 ? <><PencilIcon />{" "}Editar</> : <>+ límite</>}
                           </button>
                         </div>
                         {budget > 0 && <Bar pct={pct} over={over} warn={warn} />}
@@ -263,5 +266,11 @@ export function CategoryBudgetPanel({
 }
 
 function PencilIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+  return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+}
+function EditIcon() {
+  return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+}
+function PlusSmIcon() {
+  return <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 }
