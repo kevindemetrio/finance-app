@@ -153,7 +153,8 @@ export async function getAllTimeSavings(currentYear: number, currentMonth: numbe
 
 export function calcBalance(data: MonthData): number {
   const sum = (arr: Entry[]) => arr.reduce((a, i) => a + i.amount, 0);
-  return sum(data.incomes) + (data.carryover ?? 0) - sum(data.fixedExpenses) - sum(data.varExpenses) - sum(data.savingsEntries);
+  const paidFixed = data.fixedExpenses.filter(i => i.paid).reduce((a, i) => a + i.amount, 0);
+  return sum(data.incomes) + (data.carryover ?? 0) - paidFixed - sum(data.varExpenses) - sum(data.savingsEntries);
 }
 
 export async function getCarryover(year: number, month: number, depth = 0): Promise<number> {

@@ -35,6 +35,15 @@ export default function HomePage() {
   const today = new Date();
   const [year, setYear]              = useState(today.getFullYear());
   const [month, setMonth]            = useState(today.getMonth());
+
+  // Restore last viewed month on mount
+  useEffect(() => {
+    try {
+      const y = localStorage.getItem("last_month_year");
+      const m = localStorage.getItem("last_month_month");
+      if (y && m) { setYear(Number(y)); setMonth(Number(m)); }
+    } catch {}
+  }, []);
   const [data, setData]              = useState<MonthData>(emptyMonth());
   const [totalSavings, setSavings]   = useState(0);
   const [catBudgets, setCatBudgets]   = useState<CategoryBudget[]>([]);
@@ -160,8 +169,19 @@ export default function HomePage() {
   const deleteSaving = (i: number) => deleteEntryFromSection(i, "saving", "savingsEntries");
   const handleBudget = async (v: number) => { await saveMonthConfig(year, month, v); setData(d => ({...d, varBudget:v})); };
 
-  function prevMonth() { if (month===0){setYear(y=>y-1);setMonth(11);}else setMonth(m=>m-1); }
-  function nextMonth() { if (month===11){setYear(y=>y+1);setMonth(0);}else setMonth(m=>m+1); }
+  function saveMonth(y: number, m: number) {
+    try { localStorage.setItem("last_month_year", String(y)); localStorage.setItem("last_month_month", String(m)); } catch {}
+  }
+  function prevMonth() {
+    const y = month === 0 ? year - 1 : year;
+    const m = month === 0 ? 11 : month - 1;
+    setYear(y); setMonth(m); saveMonth(y, m);
+  }
+  function nextMonth() {
+    const y = month === 11 ? year + 1 : year;
+    const m = month === 11 ? 0 : month + 1;
+    setYear(y); setMonth(m); saveMonth(y, m);
+  }
 
   const varTotal = data.varExpenses.reduce((a,i) => a+i.amount, 0);
   const TYPE_LABEL: Record<string,string> = { income:"Ingreso", fixed:"Fijo", variable:"Variable", saving:"Ahorro" };
@@ -223,7 +243,7 @@ export default function HomePage() {
           <DesktopTabs />
           <div className="flex items-center gap-1">
             <button onClick={prevMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">‹</button>
-            <MonthPicker year={year} month={month} onChange={(y,m) => { setYear(y); setMonth(m); }} />
+            <MonthPicker year={year} month={month} onChange={(y,m) => { setYear(y); setMonth(m); saveMonth(y, m); }} />
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
           </div>
           <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">

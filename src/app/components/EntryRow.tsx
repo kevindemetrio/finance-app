@@ -106,7 +106,7 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
         >
           {displaySign}{fmtEur(displayAmount)}
         </span>
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+        <div className="flex items-center">
           <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
           <IconButton danger onClick={handleDelete} title="Eliminar"><XIcon /></IconButton>
         </div>

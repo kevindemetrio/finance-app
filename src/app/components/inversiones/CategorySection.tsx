@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Investment, InvestmentCategory, CATEGORY_LABELS, CATEGORY_COLORS,
   totalContributions, createInvestment,
@@ -16,8 +16,13 @@ interface Props {
 }
 
 export function CategorySection({ category, investments, onChange }: Props) {
+  const lsKey = `section_open_inv_${category}`;
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
+  }, [lsKey]);
   const [newName, setNewName] = useState("");
   const [newIsin, setNewIsin] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,7 +46,7 @@ export function CategorySection({ category, investments, onChange }: Props) {
       {/* Category header — matching Section.tsx style */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(o => { const next = !o; try { localStorage.setItem(lsKey, String(next)); } catch {} return next; })}
         className="w-full flex items-center justify-between px-4 py-4
           hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors
           border-b border-neutral-100 dark:border-neutral-800"

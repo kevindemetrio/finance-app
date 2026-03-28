@@ -114,6 +114,7 @@ export default function InversionesPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
+                  hideFinanceSettings
                   pageOrder={{
                     title: "Orden de categorías",
                     items: catOrder.map(cat => ({ id: cat, label: CATEGORY_LABELS[cat], color: CAT_HEX[cat] })),

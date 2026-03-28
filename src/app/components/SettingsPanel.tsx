@@ -17,6 +17,7 @@ interface Props {
   onUpdate: (fn: (prev: UserSettings) => UserSettings) => void;
   onOpenTemplate?: () => void;
   pageOrder?: PageOrderConfig;
+  hideFinanceSettings?: boolean;
   onClose: () => void;
 }
 
@@ -28,7 +29,7 @@ const ALL_FIELD_LABELS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "showPaid",     label: "Estado de pago" },
 ];
 
-export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, pageOrder, onClose }: Props) {
+export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, pageOrder, hideFinanceSettings, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
@@ -183,6 +184,7 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
         </>
       )}
 
+      {!hideFinanceSettings && (<>
       {/* ── Divider ─────────────────────────────────────────────────── */}
       <div className="mx-3 h-px bg-neutral-100 dark:bg-neutral-800 mb-3" />
 
@@ -289,6 +291,7 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
           })}
         </div>
       </div>
+      </>)}
     </div>
   );
 }

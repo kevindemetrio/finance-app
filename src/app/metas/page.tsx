@@ -160,6 +160,7 @@ export default function MetasPage() {
                   userEmail={userEmail}
                   settings={settings}
                   onUpdate={updateSettings}
+                  hideFinanceSettings
                   pageOrder={{
                     title: "Orden de metas",
                     items: [...goals].sort((a, b) => {
