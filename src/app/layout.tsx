@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ToastProvider } from "./components/Toast";
 import { CategoriesProvider } from "./components/CategoriesProvider";
+import { TrialBanner } from "./components/TrialBanner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <CategoriesProvider>
             <ToastProvider />
+            <TrialBanner />
             {children}
           </CategoriesProvider>
         </ThemeProvider>
