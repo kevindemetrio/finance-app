@@ -12,13 +12,13 @@ const links = [
   {
     href: "/metas",
     label: "Metas",
-    tourId: "nav-metas",
+    tourId: "navbar-metas",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
   },
   {
     href: "/inversiones",
     label: "Inversiones",
-    tourId: "nav-inversiones",
+    tourId: "navbar-inversiones",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
   },
   {

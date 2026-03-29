@@ -225,7 +225,7 @@ export default function HomePage() {
 
   return (
     <SeasonWrapper>
-      <AppTour />
+      <AppTour loading={loading} />
       <Navbar />
 
       {showTemplate && <TemplateManager onClose={() => setShowTemplate(false)} />}
@@ -241,7 +241,7 @@ export default function HomePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <DesktopTabs />
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" data-tour="month-nav">
             <button onClick={prevMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">‹</button>
             <MonthPicker year={year} month={month} onChange={(y,m) => { setYear(y); setMonth(m); saveMonth(y, m); }} />
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
@@ -375,14 +375,14 @@ export default function HomePage() {
                 };
                 if (key === "incomes") return (
                   <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
-                    entries={data.incomes} storageKey="incomes" tourId="income-section"
+                    entries={data.incomes} storageKey="incomes" tourId="income"
                     accentHex={sectionColors["incomes"]}
                     showCategory={prefs.showCategory} showPaid={false} {...common}
                     onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
                 );
                 if (key === "savings") return (
                   <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
-                    entries={data.savingsEntries} storageKey="savings"
+                    entries={data.savingsEntries} storageKey="savings" tourId="savings"
                     accentHex={sectionColors["savings"]}
                     showCategory={prefs.showCategory} showPaid={false} {...common}
                     bodyHeader={savingsBodyHeader}
@@ -390,7 +390,7 @@ export default function HomePage() {
                 );
                 if (key === "fixedExpenses") return (
                   <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
-                    entries={data.fixedExpenses} storageKey="fixed" tourId="fixed-section"
+                    entries={data.fixedExpenses} storageKey="fixed" tourId="fixed"
                     accentHex={sectionColors["fixedExpenses"]}
                     showPaid={prefs.showPaid} showCategory={prefs.showCategory} {...common}
                     bodyHeader={fixedBodyHeader}
@@ -398,7 +398,7 @@ export default function HomePage() {
                 );
                 return (
                   <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
-                    entries={data.varExpenses} storageKey="variable" tourId="var-section"
+                    entries={data.varExpenses} storageKey="variable" tourId="variable"
                     accentHex={sectionColors["varExpenses"]}
                     showCategory={prefs.showCategory} showPaid={true} defaultPaid={true} {...common}
                     onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />

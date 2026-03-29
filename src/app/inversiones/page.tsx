@@ -15,7 +15,7 @@ import { SettingsPanel } from "../components/SettingsPanel";
 import { useUserSettings } from "../lib/userSettings";
 
 const DEFAULT_CAT_ORDER: InvestmentCategory[] = ["emergency", "variable", "fixed", "stock"];
-const INV_ORDER_KEY = "investment_cat_order";
+const INV_ORDER_KEY = "finanzas_inv_order";
 
 const CAT_HEX: Record<InvestmentCategory, string> = {
   emergency: "#378ADD",

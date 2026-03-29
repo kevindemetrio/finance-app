@@ -76,29 +76,31 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
 
   return (
     <div>
-      <div className="group flex items-center gap-2 px-4 py-3 text-sm
+      <div className="group flex items-start gap-2 px-4 py-3 text-sm
         border-b border-neutral-100/70 dark:border-neutral-800/50 last:border-0
         hover:bg-white dark:hover:bg-neutral-800/40 transition-colors">
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pt-0.5">
           {showName && <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>}
           {showNotes && entry.notes && (
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-snug mt-0.5 italic">{entry.notes}</p>
           )}
         </div>
         {showDate && (
-          <span className="text-[11px] text-neutral-300 dark:text-neutral-600 shrink-0 tabular-nums">{fmtDate(entry.date)}</span>
+          <span className="text-[11px] text-neutral-300 dark:text-neutral-600 shrink-0 tabular-nums pt-0.5">{fmtDate(entry.date)}</span>
         )}
-        {showCategory && entry.category && <CategoryBadge cat={entry.category} />}
+        {showCategory && entry.category && <span className="pt-0.5"><CategoryBadge cat={entry.category} /></span>}
         {showPaid && (
-          <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
+          <span className="pt-0.5">
+            <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
+          </span>
         )}
         <span
-          className={`font-semibold text-right w-20 shrink-0 ${displayColor}`}
+          className={`font-semibold text-right w-20 shrink-0 pt-0.5 ${displayColor}`}
           style={accentHex && entry.amount >= 0 ? { color: accentHex } : undefined}
         >
           {displaySign}{fmtEur(displayAmount)}
         </span>
-        <div className="flex items-center">
+        <div className="flex items-center pt-0.5">
           <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
           <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
         </div>

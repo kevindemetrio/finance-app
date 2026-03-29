@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
-import { createCategory, deleteCategory, loadCategories } from "../lib/data";
+import { createCategory, deleteCategory, loadCategories, loadGoals, Goal } from "../lib/data";
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
@@ -11,6 +11,7 @@ import { TemplateManager } from "../components/TemplateManager";
 import { toast, confirm } from "../components/Toast";
 import { GhostButton, PrimaryButton, SaveButton, TextInput } from "../components/ui";
 import { useCategories } from "../components/CategoriesProvider";
+import { TOUR_KEY } from "../components/AppTour";
 import {
   useUserSettings, SectionKey, SectionPrefs,
   SECTION_LABELS as SECTION_LABELS_MAP, SECTION_AVAILABLE_FIELDS,
@@ -18,6 +19,8 @@ import {
 
 const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
 const SECTION_COLOR_PRESETS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30","#5F5E5A"];
+const GOALS_ORDER_KEY = "finanzas_goals_order";
+const INV_ORDER_KEY = "finanzas_inv_order";
 
 const SECTION_LABELS: Record<string, string> = {
   incomes: "Ingresos",
@@ -33,6 +36,17 @@ const ALL_FIELD_LABELS: { key: keyof SectionPrefs; label: string }[] = [
   { key: "showCategory", label: "Categoría" },
   { key: "showNotes",    label: "Notas" },
   { key: "showPaid",     label: "Estado de pago" },
+];
+
+const INV_CATS_META = [
+  { key: "emergency", label: "Fondo de emergencia", color: "#378ADD",
+    desc: "Capital líquido para imprevistos. Cuentas de ahorro o depósitos de alta liquidez. Objetivo habitual: 3-6 meses de gastos." },
+  { key: "variable",  label: "Renta variable",       color: "#1D9E75",
+    desc: "ETFs, fondos indexados, acciones individuales. Mayor rentabilidad esperada a largo plazo con mayor volatilidad." },
+  { key: "fixed",     label: "Renta fija",            color: "#BA7517",
+    desc: "Bonos, letras del Tesoro, depósitos a plazo. Menor riesgo y rendimiento predecible." },
+  { key: "stock",     label: "Acciones directas",     color: "#E24B4A",
+    desc: "Participación directa en empresas cotizadas. Requiere seguimiento activo y mayor tolerancia al riesgo." },
 ];
 
 export default function AjustesPage() {
@@ -58,13 +72,16 @@ export default function AjustesPage() {
 
   // ── METAS ───────────────────────────────────────────────────────────────
   const [defaultGoalColor, setDefaultGoalColor] = useState(GOAL_COLORS[0]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalOrder, setGoalOrder] = useState<string[]>([]);
+
+  // ── INVERSIONES ─────────────────────────────────────────────────────────
+  const [invOrder, setInvOrder] = useState<string[]>(INV_CATS_META.map(c => c.key));
+  const [invOpen, setInvOpen] = useState<string | null>(null);
 
   // ── FINANZAS — section order + fields ──────────────────────────────────
   const { settings, update: updateSettings } = useUserSettings();
   const [activeFieldSection, setActiveFieldSection] = useState<SectionKey | null>(null);
-
-  // ── INVERSIONES accordion ───────────────────────────────────────────────
-  const [invOpen, setInvOpen] = useState<string | null>(null);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -72,7 +89,7 @@ export default function AjustesPage() {
     });
     loadCategories().then(cats => { setCategories(cats); setCatsLoading(false); });
 
-    // Load section colors from localStorage
+    // Section colors
     const colors: Record<string, string> = {};
     for (const k of SECTION_KEYS) {
       const c = localStorage.getItem(`section_color_${k}`);
@@ -80,9 +97,28 @@ export default function AjustesPage() {
     }
     setSectionColors(colors);
 
-    // Load default goal color
+    // Default goal color
     const dgc = localStorage.getItem("default_goal_color");
     if (dgc) setDefaultGoalColor(dgc);
+
+    // Goals
+    loadGoals().then(g => {
+      setGoals(g);
+      const savedOrder = localStorage.getItem(GOALS_ORDER_KEY);
+      if (savedOrder) {
+        try {
+          const parsed: string[] = JSON.parse(savedOrder);
+          const withNew = [...parsed.filter(id => g.some(x => x.id === id)), ...g.map(x => x.id).filter(id => !parsed.includes(id))];
+          setGoalOrder(withNew);
+        } catch { setGoalOrder(g.map(x => x.id)); }
+      } else {
+        setGoalOrder(g.map(x => x.id));
+      }
+    });
+
+    // Inv order
+    const savedInv = localStorage.getItem(INV_ORDER_KEY);
+    if (savedInv) { try { setInvOrder(JSON.parse(savedInv)); } catch {} }
   }, []);
 
   // ── CUENTA handlers ──────────────────────────────────────────────────────
@@ -122,10 +158,7 @@ export default function AjustesPage() {
       ...prev,
       sectionPrefs: {
         ...prev.sectionPrefs,
-        [section]: {
-          ...prev.sectionPrefs[section],
-          [field]: !prev.sectionPrefs[section][field],
-        },
+        [section]: { ...prev.sectionPrefs[section], [field]: !prev.sectionPrefs[section][field] },
       },
     }));
   }
@@ -147,11 +180,7 @@ export default function AjustesPage() {
 
   async function handleDeleteCat(name: string) {
     if (categories.length <= 1) { toast("Debe haber al menos una categoría", "error"); return; }
-    const ok = await confirm({
-      title: `¿Eliminar "${name}"?`,
-      message: "Los movimientos asociados quedarán sin categoría.",
-      danger: true,
-    });
+    const ok = await confirm({ title: `¿Eliminar "${name}"?`, message: "Los movimientos asociados quedarán sin categoría.", danger: true });
     if (!ok) return;
     await deleteCategory(name);
     const updated = await loadCategories();
@@ -176,23 +205,50 @@ export default function AjustesPage() {
     localStorage.setItem("default_goal_color", color);
   }
 
-  // ── METAS — restart tour ─────────────────────────────────────────────────
+  // ── METAS — goal ordering ─────────────────────────────────────────────────
+  function moveGoal(id: string, dir: -1 | 1) {
+    setGoalOrder(prev => {
+      const order = [...prev];
+      const i = order.indexOf(id);
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[i], order[j]] = [order[j], order[i]];
+      try { localStorage.setItem(GOALS_ORDER_KEY, JSON.stringify(order)); } catch {}
+      return order;
+    });
+  }
+
+  // ── INVERSIONES — category ordering ──────────────────────────────────────
+  function moveInvCat(key: string, dir: -1 | 1) {
+    setInvOrder(prev => {
+      const order = [...prev];
+      const i = order.indexOf(key);
+      const j = i + dir;
+      if (j < 0 || j >= order.length) return prev;
+      [order[i], order[j]] = [order[j], order[i]];
+      try { localStorage.setItem(INV_ORDER_KEY, JSON.stringify(order)); } catch {}
+      return order;
+    });
+  }
+
+  // ── TOUR ──────────────────────────────────────────────────────────────────
   function handleRestartTour() {
-    localStorage.removeItem("tour_completed");
+    localStorage.removeItem(TOUR_KEY);
     router.push("/");
   }
 
-  // ── INV categories ────────────────────────────────────────────────────────
-  const INV_CATS = [
-    { key: "emergency", label: "Fondo de emergencia", color: "#1D9E75",
-      desc: "Capital líquido para imprevistos. Cuentas de ahorro o depósitos de alta liquidez. Objetivo habitual: 3-6 meses de gastos." },
-    { key: "variable", label: "Renta variable", color: "#378ADD",
-      desc: "ETFs, fondos indexados, acciones individuales. Mayor rentabilidad esperada a largo plazo con mayor volatilidad." },
-    { key: "fixed", label: "Renta fija", color: "#BA7517",
-      desc: "Bonos, letras del Tesoro, depósitos a plazo. Menor riesgo y rendimiento predecible." },
-    { key: "stock", label: "Acciones directas", color: "#7F77DD",
-      desc: "Participación directa en empresas cotizadas. Requiere seguimiento activo y mayor tolerancia al riesgo." },
-  ];
+  const sortedGoals = [...goals].sort((a, b) => {
+    const ai = goalOrder.indexOf(a.id);
+    const bi = goalOrder.indexOf(b.id);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  const sortedInvCats = invOrder
+    .map(key => INV_CATS_META.find(c => c.key === key))
+    .filter(Boolean) as typeof INV_CATS_META;
 
   return (
     <SeasonWrapper>
@@ -457,6 +513,8 @@ export default function AjustesPage() {
 
           {/* ── METAS ───────────────────────────────────────────────────── */}
           <SettingsCard label="METAS" dot="bg-brand-red">
+
+            {/* Default goal color */}
             <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 Color por defecto para nuevas metas
@@ -476,26 +534,64 @@ export default function AjustesPage() {
                 ))}
               </div>
             </div>
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tour de bienvenida</p>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Vuelve a ver el recorrido por la app</p>
-              </div>
-              <button
-                onClick={handleRestartTour}
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg
-                  bg-brand-blue-light dark:bg-blue-950/60 text-brand-blue
-                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
-              >
-                <AjTourIcon /> Ver tour
-              </button>
+
+            {/* Goal ordering */}
+            <div className="px-4 py-3">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de metas</p>
+              {sortedGoals.length === 0 ? (
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic">Sin metas todavía</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {sortedGoals.map((goal, i) => (
+                    <div key={goal.id} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: goal.color ?? "#1D9E75" }} />
+                      <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300 truncate">{goal.name}</span>
+                      <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => moveGoal(goal.id, -1)} disabled={i === 0}
+                          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                          <ChevUpIcon />
+                        </button>
+                        <button onClick={() => moveGoal(goal.id, 1)} disabled={i === sortedGoals.length - 1}
+                          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                          <ChevDownIcon />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </SettingsCard>
 
           {/* ── INVERSIONES ─────────────────────────────────────────────── */}
           <SettingsCard label="INVERSIONES" dot="bg-[#7F77DD]">
+
+            {/* Category ordering */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de categorías</p>
+              <div className="space-y-0.5">
+                {sortedInvCats.map((cat, i) => (
+                  <div key={cat.key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
+                    <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{cat.label}</span>
+                    <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => moveInvCat(cat.key, -1)} disabled={i === 0}
+                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                        <ChevUpIcon />
+                      </button>
+                      <button onClick={() => moveInvCat(cat.key, 1)} disabled={i === sortedInvCats.length - 1}
+                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                        <ChevDownIcon />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Category descriptions accordion */}
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {INV_CATS.map(cat => (
+              {sortedInvCats.map(cat => (
                 <div key={cat.key}>
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors"
@@ -517,6 +613,24 @@ export default function AjustesPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </SettingsCard>
+
+          {/* ── TOUR DE BIENVENIDA ───────────────────────────────────────── */}
+          <SettingsCard label="TOUR DE BIENVENIDA" dot="bg-brand-blue">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Recorrido por la app</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Vuelve a ver el tour interactivo de bienvenida</p>
+              </div>
+              <button
+                onClick={handleRestartTour}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg
+                  bg-brand-blue-light dark:bg-blue-950/60 text-brand-blue
+                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
+              >
+                <AjTourIcon /> Volver a ver
+              </button>
             </div>
           </SettingsCard>
 

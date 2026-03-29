@@ -81,8 +81,6 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
     }));
   }
 
-  const initial = userEmail ? userEmail.charAt(0).toUpperCase() : "?";
-
   return (
     <div
       ref={ref}
@@ -111,17 +109,9 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
 
       {/* ── User section ────────────────────────────────────────────── */}
       <div className="mx-3 mb-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
-        <div className="px-3 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full shrink-0 select-none
-            bg-gradient-to-br from-brand-blue-light to-blue-100 dark:from-blue-950 dark:to-blue-900
-            flex items-center justify-center
-            shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_1px_3px_rgba(55,138,221,0.2)]">
-            <span className="text-sm font-black text-brand-blue">{initial}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">Cuenta</p>
-            <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate leading-none">{userEmail || "—"}</p>
-          </div>
+        <div className="px-3 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-0.5">Cuenta</p>
+          <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 truncate leading-none">{userEmail || "—"}</p>
         </div>
         {/* Link to full settings */}
         <button

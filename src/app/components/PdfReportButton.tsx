@@ -420,6 +420,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
 
   return (
     <button onClick={generatePdf} disabled={loading}
+      data-tour="pdf-button"
       className="w-9 h-9 flex items-center justify-center rounded-xl
         text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800
         hover:text-neutral-700 dark:hover:text-neutral-200
