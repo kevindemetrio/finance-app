@@ -63,7 +63,10 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
     setEditDate(goal.deadline ?? "");
     setEditColor(goal.color ?? GOAL_COLORS[0]);
     setEditing(true);
-    if (!open) toggle();
+    if (!open) {
+      setOpen(true);
+      try { localStorage.setItem(lsKey, "true"); } catch {}
+    }
   }
 
   async function handleSaveEdit() {
@@ -107,26 +110,52 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
   return (
     <div className="card overflow-hidden">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 py-3.5">
-        <button
-          type="button"
-          onClick={toggle}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left"
-        >
-          <svg
-            className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 shrink-0 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-          <span className="text-sm font-semibold truncate flex-1">{goal.name}</span>
-          <span className="text-sm font-bold shrink-0 ml-1 tabular-nums" style={{ color }}>
-            {fmtEur(goal.savedAmount)}
-          </span>
-        </button>
+      <div className="flex items-center gap-2 px-4 pt-3.5 pb-3">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+        <span className="text-sm font-semibold truncate flex-1">{goal.name}</span>
+        <span className="text-sm font-bold shrink-0 tabular-nums" style={{ color }}>
+          {fmtEur(goal.savedAmount)}
+        </span>
         <IconButton onClick={openEdit} title="Editar meta"><PencilIcon /></IconButton>
         <IconButton danger onClick={() => onDelete(goal.id)} title="Eliminar meta"><XIcon /></IconButton>
+      </div>
+
+      {/* ── Progress — siempre visible ──────────────────────────────────── */}
+      <div className="px-4 pb-3">
+        <div className="h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden mb-1.5">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: color }}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+            {done
+              ? <span className="font-semibold" style={{ color }}>✓ Completada</span>
+              : <>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</>}
+          </span>
+          <div className="flex items-center gap-2">
+            {goal.deadline && (
+              <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}
+              </span>
+            )}
+            <span className="text-xs font-bold tabular-nums" style={{ color }}>{pct}%</span>
+            <button
+              type="button"
+              onClick={toggle}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-300 dark:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              title={open ? "Cerrar" : "Ver aportaciones"}
+            >
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       {open && (
@@ -156,35 +185,8 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
             </div>
           )}
 
-          {/* ── Progress ───────────────────────────────────────────────── */}
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                {fmtEur(goal.savedAmount)} de {fmtEur(goal.targetAmount)}
-              </span>
-              <span className="text-sm font-bold tabular-nums" style={{ color }}>{pct}%</span>
-            </div>
-            <div className="h-2.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${pct}%`, background: color }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-neutral-400 dark:text-neutral-500 mt-1.5">
-              {done
-                ? <span className="font-semibold" style={{ color }}>✓ Meta completada</span>
-                : <span>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</span>}
-              {goal.deadline && (
-                <span>Límite: {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}</span>
-              )}
-            </div>
-          </div>
-
-          {/* ── Separator ──────────────────────────────────────────────── */}
-          <div className="mx-4 h-px bg-neutral-100 dark:bg-neutral-800" />
-
           {/* ── Add contribution ──────────────────────────────────────── */}
-          <div className="px-4 py-3">
+          <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
             {!addingContrib ? (
               <button
                 onClick={() => setAddingContrib(true)}
@@ -230,9 +232,6 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
               </div>
             )}
           </div>
-
-          {/* ── Separator ──────────────────────────────────────────────── */}
-          <div className="mx-4 h-px bg-neutral-100 dark:bg-neutral-800" />
 
           {/* ── Contributions list ─────────────────────────────────────── */}
           <div className="px-4 py-2 pb-3">
