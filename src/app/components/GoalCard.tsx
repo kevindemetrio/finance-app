@@ -21,6 +21,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
   const lsKey = `goal_open_${goal.id}`;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [addingContrib, setAddingContrib] = useState(false);
 
   // Contribution state
   const [contributions, setContributions] = useState<GoalContribution[]>([]);
@@ -85,7 +86,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
     const a = parseFloat(addAmount);
     if (isNaN(a) || a === 0) return;
     await addGoalContribution(goal.id, a, addDate, addNotes.trim() || undefined);
-    setAddAmount(""); setAddDate(todayStr()); setAddNotes("");
+    setAddAmount(""); setAddDate(todayStr()); setAddNotes(""); setAddingContrib(false);
     loadGoalContributions(goal.id).then(setContributions);
     onSavedAmountChange();
     toast("Aportación registrada");
@@ -182,36 +183,52 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
           {/* ── Separator ──────────────────────────────────────────────── */}
           <div className="mx-4 h-px bg-neutral-100 dark:bg-neutral-800" />
 
-          {/* ── Add contribution form ──────────────────────────────────── */}
+          {/* ── Add contribution ──────────────────────────────────────── */}
           <div className="px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-2">
-              Registrar aportación
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <TextInput
-                type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)}
-                placeholder="€" className="w-20" step="0.01" min="0"
-                onKeyDown={e => e.key === "Enter" && handleAddContribution()}
-              />
-              <TextInput
-                type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
-                className="w-34"
-              />
-              <TextInput
-                value={addNotes} onChange={e => setAddNotes(e.target.value)}
-                placeholder="Nota (opcional)" className="flex-1 min-w-[100px]"
-                onKeyDown={e => e.key === "Enter" && handleAddContribution()}
-              />
+            {!addingContrib ? (
               <button
-                onClick={handleAddContribution}
-                disabled={!addAmount || isNaN(parseFloat(addAmount)) || parseFloat(addAmount) === 0}
-                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors
-                  text-white disabled:opacity-40"
+                onClick={() => setAddingContrib(true)}
+                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white"
                 style={{ background: color }}
               >
-                + Añadir
+                + Añadir aportación
               </button>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+                  Registrar aportación
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <TextInput
+                    type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)}
+                    placeholder="€" className="w-20" step="0.01" min="0" autoFocus
+                    onKeyDown={e => e.key === "Enter" && handleAddContribution()}
+                  />
+                  <TextInput
+                    type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
+                    className="w-34"
+                  />
+                  <TextInput
+                    value={addNotes} onChange={e => setAddNotes(e.target.value)}
+                    placeholder="Nota (opcional)" className="flex-1 min-w-[100px]"
+                    onKeyDown={e => e.key === "Enter" && handleAddContribution()}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <GhostButton onClick={() => { setAddingContrib(false); setAddAmount(""); setAddDate(todayStr()); setAddNotes(""); }}>
+                    Cancelar
+                  </GhostButton>
+                  <button
+                    onClick={handleAddContribution}
+                    disabled={!addAmount || isNaN(parseFloat(addAmount)) || parseFloat(addAmount) === 0}
+                    className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white disabled:opacity-40"
+                    style={{ background: color }}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Separator ──────────────────────────────────────────────── */}

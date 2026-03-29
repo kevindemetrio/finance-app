@@ -400,7 +400,7 @@ export default function HomePage() {
                   <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
                     entries={data.varExpenses} storageKey="variable" tourId="variable"
                     accentHex={sectionColors["varExpenses"]}
-                    showCategory={prefs.showCategory} showPaid={true} defaultPaid={true} {...common}
+                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} {...common}
                     onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
                 );
               })}
