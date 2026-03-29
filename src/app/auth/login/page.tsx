@@ -18,7 +18,7 @@ const BILLS = [
 function BillRain() {
   const sceneRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
-  const MAX = 40;
+  const MAX = 0;
 
   useEffect(() => {
     const scene = sceneRef.current;

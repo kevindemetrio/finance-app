@@ -5,26 +5,19 @@ import { GhostButton, PrimaryButton } from "./ui";
 
 const STEPS = [
   { targetSelector: "[data-tour='summary']", title: "Resumen mensual",
-    description: "Aquí ves de un vistazo tus ingresos, gastos y balance del mes.",
-    position: "bottom" as const },
+    description: "Aquí ves de un vistazo tus ingresos, gastos y balance del mes." },
   { targetSelector: "[data-tour='income-section']", title: "Ingresos",
-    description: "Añade todos tus ingresos del mes: nómina, freelance, alquileres...",
-    position: "bottom" as const },
+    description: "Añade todos tus ingresos del mes: nómina, freelance, alquileres..." },
   { targetSelector: "[data-tour='fixed-section']", title: "Gastos fijos",
-    description: "Gastos recurrentes como el alquiler o suscripciones. Márcalos como pagados.",
-    position: "bottom" as const },
+    description: "Gastos recurrentes como el alquiler o suscripciones. Márcalos como pagados." },
   { targetSelector: "[data-tour='var-section']", title: "Gastos variables",
-    description: "El día a día: supermercado, restaurantes... Asigna categorías para ver dónde gastas más.",
-    position: "bottom" as const },
+    description: "El día a día: supermercado, restaurantes... Asigna categorías para ver dónde gastas más." },
   { targetSelector: "[data-tour='budget-panel']", title: "Presupuestos",
-    description: "Define límites de gasto por categoría. Las barras se ponen en rojo cuando te pasas.",
-    position: "top" as const },
+    description: "Define límites de gasto por categoría. Las barras se ponen en rojo cuando te pasas." },
   { targetSelector: "[data-tour='nav-metas']", title: "Metas de ahorro",
-    description: "Crea objetivos con fecha límite y sigue tu progreso.",
-    position: "top" as const },
+    description: "Crea objetivos con fecha límite y sigue tu progreso." },
   { targetSelector: "[data-tour='nav-inversiones']", title: "Inversiones",
-    description: "Registra tu cartera de inversiones organizada por tipo de activo.",
-    position: "top" as const },
+    description: "Registra tu cartera de inversiones organizada por tipo de activo." },
 ];
 
 interface TooltipPos { top: number; left: number; }
@@ -53,7 +46,8 @@ export function AppTour({ forceOpen = false, onClose }: { forceOpen?: boolean; o
       const TOOLTIP_H = 160;
       const MARGIN = 12;
       let top = 0, left = 0;
-      if (STEPS[step].position === "bottom") top = rect.bottom + MARGIN;
+      const inTopHalf = rect.top < window.innerHeight / 2;
+      if (inTopHalf) top = rect.bottom + MARGIN;
       else top = rect.top - TOOLTIP_H - MARGIN;
       left = rect.left + rect.width / 2 - TOOLTIP_W / 2;
       left = Math.max(12, Math.min(left, window.innerWidth - TOOLTIP_W - 12));

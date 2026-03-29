@@ -57,13 +57,14 @@ export function CategoryBudgetPanel({
     });
   }
 
-  // Spending per category
+  // Spending per category — exclude unpaid (pending) variable expenses
+  const paidVarExpenses = varExpenses.filter(e => e.paid !== false);
   const spending: Record<string, number> = {};
-  for (const e of varExpenses) {
+  for (const e of paidVarExpenses) {
     const cat = e.category || "Otro";
     spending[cat] = (spending[cat] || 0) + e.amount;
   }
-  const varTotal = varExpenses.reduce((a, e) => a + e.amount, 0);
+  const varTotal = paidVarExpenses.reduce((a, e) => a + e.amount, 0);
 
   const globalPct  = varBudget > 0 ? Math.round((varTotal / varBudget) * 100) : 0;
   const globalOver = varBudget > 0 && varTotal > varBudget;

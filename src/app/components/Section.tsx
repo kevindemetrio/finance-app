@@ -13,6 +13,7 @@ interface Props {
   sign: "+" | "−";
   entries: Entry[];
   showPaid?: boolean;
+  defaultPaid?: boolean;
   showCategory?: boolean;
   showDate?: boolean;
   showNotes?: boolean;
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export function Section({
-  title, dotColor, totalColor, accentHex, sign, entries, showPaid, showCategory,
+  title, dotColor, totalColor, accentHex, sign, entries, showPaid, defaultPaid, showCategory,
   showDate, showNotes, showName,
   emptyMessage, headerAfter, bodyHeader, storageKey, tourId, onAdd, onUpdate, onDelete,
 }: Props) {
@@ -59,6 +60,7 @@ export function Section({
       {showModal && (
         <AddEntryModal
           title={title} showCategory={showCategory} showPaid={showPaid}
+          defaultPaid={defaultPaid}
           onAdd={onAdd} onClose={() => setShowModal(false)}
         />
       )}

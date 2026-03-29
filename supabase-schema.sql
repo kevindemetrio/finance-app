@@ -149,3 +149,20 @@ alter table recurring_templates add column if not exists day_of_month int defaul
 
 -- Add notes to recurring_templates
 alter table recurring_templates add column if not exists notes text;
+
+-- ─── Aportaciones a metas ─────────────────────────────────────────────────────
+create table if not exists goal_contributions (
+  id uuid primary key default gen_random_uuid(),
+  goal_id uuid references goals(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  amount numeric(12,2) not null,
+  date date not null,
+  notes text,
+  created_at timestamptz default now()
+);
+alter table goal_contributions enable row level security;
+create policy "Users manage own goal contributions"
+  on goal_contributions for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+create index if not exists goal_contributions_goal on goal_contributions(goal_id);

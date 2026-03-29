@@ -9,18 +9,19 @@ interface Props {
   title: string;
   showCategory?: boolean;
   showPaid?: boolean;
+  defaultPaid?: boolean;
   onAdd: (entry: Entry) => void;
   onClose: () => void;
 }
 
-export function AddEntryModal({ title, showCategory, showPaid, onAdd, onClose }: Props) {
+export function AddEntryModal({ title, showCategory, showPaid, defaultPaid, onAdd, onClose }: Props) {
   const { categories } = useCategories();
   const [name, setName]         = useState("");
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState(todayStr());
   const [category, setCategory] = useState("");
   const [notes, setNotes]       = useState("");
-  const [paid, setPaid]         = useState(false);
+  const [paid, setPaid]         = useState(defaultPaid ?? false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

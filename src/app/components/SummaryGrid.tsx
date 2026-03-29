@@ -15,7 +15,7 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
     const totalFix  = data.fixedExpenses.reduce((a, i) => a + i.amount, 0);
     const fixPaid   = data.fixedExpenses.filter(i => i.paid).reduce((a, i) => a + i.amount, 0);
     const fixPending = totalFix - fixPaid;
-    const totalVar  = data.varExpenses.reduce((a, i) => a + i.amount, 0);
+    const totalVar  = data.varExpenses.filter(i => i.paid !== false).reduce((a, i) => a + i.amount, 0);
     const savMonth  = data.savingsEntries.reduce((a, i) => a + i.amount, 0);
     const balance   = calcBalance(data);
     const varBudget = data.varBudget ?? 0;
@@ -45,7 +45,7 @@ export function SummaryGrid({ data, totalSavings, isPastMonth }: Props) {
             <span className="text-[11px] text-brand-red-dark dark:text-red-400">✗ {fmtEur(fixPending)}</span>
           </div>
         </MetricCard>
-        <MetricCard label="Variables" value={fmtEur(totalVar)} color={varOver ? "red" : "orange"}>
+        <MetricCard label="Gastos variables" value={fmtEur(totalVar)} color={varOver ? "red" : "orange"}>
           {varBudget > 0 && (
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">{varPct}% de {fmtEur(varBudget)}</p>
           )}

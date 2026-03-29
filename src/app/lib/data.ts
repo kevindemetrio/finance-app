@@ -47,6 +47,7 @@ export interface RecurringTemplate {
   category?: Category;
   sortOrder: number;
   dayOfMonth: number;
+  notes?: string;
 }
 
 export interface CategoryBudget {
@@ -154,7 +155,8 @@ export async function getAllTimeSavings(currentYear: number, currentMonth: numbe
 export function calcBalance(data: MonthData): number {
   const sum = (arr: Entry[]) => arr.reduce((a, i) => a + i.amount, 0);
   const paidFixed = data.fixedExpenses.filter(i => i.paid).reduce((a, i) => a + i.amount, 0);
-  return sum(data.incomes) + (data.carryover ?? 0) - paidFixed - sum(data.varExpenses) - sum(data.savingsEntries);
+  const paidVar   = data.varExpenses.filter(i => i.paid !== false).reduce((a, i) => a + i.amount, 0);
+  return sum(data.incomes) + (data.carryover ?? 0) - paidFixed - paidVar - sum(data.savingsEntries);
 }
 
 export async function getCarryover(year: number, month: number, depth = 0): Promise<number> {
@@ -351,4 +353,52 @@ export async function deleteCategory(name: string): Promise<void> {
     .delete()
     .eq("user_id", user.id)
     .eq("name", name);
+}
+
+// ─── Goal contributions ───────────────────────────────────────────────────────
+
+export type GoalContribution = {
+  id: string;
+  goal_id: string;
+  amount: number;
+  date: string;
+  notes?: string;
+};
+
+export async function loadGoalContributions(goalId: string): Promise<GoalContribution[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("goal_contributions")
+    .select("*")
+    .eq("goal_id", goalId)
+    .order("date", { ascending: false });
+  if (!data) return [];
+  return data.map(r => ({
+    id: r.id, goal_id: r.goal_id, amount: Number(r.amount),
+    date: r.date, notes: r.notes ?? undefined,
+  }));
+}
+
+export async function addGoalContribution(goalId: string, amount: number, date: string, notes?: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("goal_contributions").insert({
+    goal_id: goalId, user_id: user.id, amount, date, notes: notes || null,
+  });
+  const { data: goal } = await supabase.from("goals").select("saved_amount").eq("id", goalId).single();
+  if (goal) {
+    const newSaved = Math.max(0, Number(goal.saved_amount) + amount);
+    await supabase.from("goals").update({ saved_amount: newSaved }).eq("id", goalId);
+  }
+}
+
+export async function deleteGoalContribution(id: string, amount: number, goalId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("goal_contributions").delete().eq("id", id);
+  const { data: goal } = await supabase.from("goals").select("saved_amount").eq("id", goalId).single();
+  if (goal) {
+    const newSaved = Math.max(0, Number(goal.saved_amount) - amount);
+    await supabase.from("goals").update({ saved_amount: newSaved }).eq("id", goalId);
+  }
 }

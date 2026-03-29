@@ -126,23 +126,25 @@ export function TemplateManager({ onClose }: Props) {
                   <GhostButton onClick={() => setEditId(null)}>✕</GhostButton>
                 </div>
               ) : (
-                <div className="grid grid-cols-[1fr_72px_100px_56px_56px] gap-2 items-center px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0" />
-                    <span className="text-neutral-800 dark:text-neutral-200 truncate">{t.name}</span>
+                <div className="grid grid-cols-[1fr_72px_100px_56px_56px] gap-2 items-start px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-sm">
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-amber shrink-0 mt-1" />
+                      <span className="text-neutral-800 dark:text-neutral-200 truncate">{t.name}</span>
+                    </div>
+                    {t.notes && (
+                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 italic truncate ml-3.5 mt-0.5">{t.notes}</p>
+                    )}
                   </div>
-                  <span className="font-medium text-brand-amber">−{fmt(t.amount)}</span>
+                  <span className="font-medium text-brand-amber pt-0.5">−{fmt(t.amount)}</span>
                   {t.category ? (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 truncate">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 truncate self-start mt-0.5">
                       {t.category}
                     </span>
                   ) : (
-                    <span className="text-neutral-300 dark:text-neutral-600 text-xs">—</span>
+                    <span className="text-neutral-300 dark:text-neutral-600 text-xs pt-0.5">—</span>
                   )}
-                  {t.notes && (
-                    <span className="text-xs text-neutral-400 dark:text-neutral-500 italic truncate max-w-[120px]" title={t.notes}>{t.notes}</span>
-                  )}
-                  <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                  <span className="text-xs text-neutral-400 dark:text-neutral-500 pt-0.5">
                     día {t.dayOfMonth ?? 1}
                   </span>
                   <div className="flex items-center gap-1 justify-end">

@@ -69,14 +69,6 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
     setEditing(false);
   }
 
-  async function handleDelete() {
-    const ok = await new Promise<boolean>(resolve => {
-      const confirmed = window.confirm(`¿Eliminar "${entry.name}"?`);
-      resolve(confirmed);
-    });
-    if (ok) onDelete();
-  }
-
   // B5: negative amount display
   const displaySign   = sign === "+" && entry.amount < 0 ? "−" : sign;
   const displayAmount = Math.abs(entry.amount);
@@ -108,7 +100,7 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
         </span>
         <div className="flex items-center">
           <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-          <IconButton danger onClick={handleDelete} title="Eliminar"><XIcon /></IconButton>
+          <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
         </div>
       </div>
 

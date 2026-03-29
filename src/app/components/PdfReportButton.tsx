@@ -108,7 +108,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
           setTxt(doc, c.c || "#282828");
           doc.text(c.t,c.x,y+4.5,{align:c.a||"left"});
         }
-        y+=7;
+        y+=9;
       }
       function rowHeader(cols:{t:string;x:number;a?:"right"|"left"}[]) {
         sp(7);
@@ -172,17 +172,17 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // ════════════════════════════════════════════════════════════════════════
       const inc=data.incomes.reduce((a,i)=>a+i.amount,0);
       const fix=data.fixedExpenses.reduce((a,i)=>a+i.amount,0);
-      const vr=data.varExpenses.reduce((a,i)=>a+i.amount,0);
-      const sav=data.savingsEntries.reduce((a,i)=>a+i.amount,0);
-      const bal=inc+carryover-fix-vr-sav;
       const paidFix=data.fixedExpenses.filter(e=>e.paid).reduce((a,i)=>a+i.amount,0);
+      const vr=data.varExpenses.filter(e=>e.paid!==false).reduce((a,i)=>a+i.amount,0);
+      const sav=data.savingsEntries.reduce((a,i)=>a+i.amount,0);
+      const bal=inc+carryover-paidFix-vr-sav;
 
       title("Resumen del mes","#1D9E75");
 
       const mets=[
         {l:"Ingresos",     v:fmtN(inc),                             c:"#1D9E75"},
         {l:"Gastos fijos", v:fmtN(fix),                             c:"#BA7517"},
-        {l:"Variables",    v:fmtN(vr),                              c:"#E24B4A"},
+        {l:"Gastos variables", v:fmtN(vr),                           c:"#E24B4A"},
         {l:"Ahorros",      v:fmtN(sav),                             c:"#378ADD"},
         {l:"Balance",      v:(bal>=0?"+ ":"- ")+fmtN(Math.abs(bal)),c:bal>=0?"#1D9E75":"#E24B4A"},
         {l:"Ahorro total", v:fmtN(totalSavings),                    c:"#378ADD"},
@@ -212,7 +212,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         pieBar([
           ...(carryover>0?[{label:"Arrastre anterior",amount:carryover,color:"#4a9a28"}]:[]),
           {label:"Gastos fijos", amount:fix, color:"#BA7517"},
-          {label:"Variables",    amount:vr,  color:"#E24B4A"},
+          {label:"Gastos variables", amount:vr, color:"#E24B4A"},
           {label:"Ahorros",      amount:sav, color:"#378ADD"},
           {label:"Balance libre",amount:Math.max(bal,0),color:"#1D9E75"},
         ], totalAvailable);
@@ -337,7 +337,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
 
       // Category bars
       const catSpend: Record<string,number>={};
-      for(const e of data.varExpenses){ const c=e.category||"Otro"; catSpend[c]=(catSpend[c]||0)+e.amount; }
+      for(const e of data.varExpenses.filter(e=>e.paid!==false)){ const c=e.category||"Otro"; catSpend[c]=(catSpend[c]||0)+e.amount; }
       const cats=Object.entries(catSpend).sort((a,b)=>b[1]-a[1]);
 
       if(cats.length>0){
@@ -352,17 +352,20 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
           const isOver=bAmt>0&&amount>bAmt;
           const clr=isOver?"#E24B4A":bAmt>0&&amount/bAmt>=0.8?"#BA7517":PALETTE[i%PALETTE.length];
           const maxW=cW-48;
-          const pct=bAmt>0?Math.min(amount/bAmt,1):amount/cats[0][1];
-                    doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#323232");
+          const pct=bAmt>0?Math.min(amount/bAmt,1):vr>0?Math.min(amount/vr,1):0;
+          doc.setFontSize(7.5); doc.setFont("helvetica","normal"); setTxt(doc,"#323232");
           doc.text(cat.length>17?cat.slice(0,16)+"…":cat,mg,y+4);
           setFill(doc,"#e4e4e4"); doc.rect(mg+36,y,maxW,4.5,"F");
           setFill(doc, clr); doc.rect(mg+36,y,pct*maxW,4.5,"F");
           doc.setFont("helvetica","bold"); setTxt(doc, clr);
           doc.text("-"+fmtN(amount),W-mg,y+4,{align:"right"});
+          doc.setFontSize(6.5); doc.setFont("helvetica","normal");
           if(bAmt>0){
-            doc.setFontSize(6.5); doc.setFont("helvetica","normal");
             setTxt(doc, isOver?"#a00000":"#647864");
             doc.text(`${Math.round((amount/bAmt)*100)}% de ${fmtN(bAmt)} ${isOver?"↑":"✓"}`,mg+36+maxW+2,y+4);
+          } else if(vr>0) {
+            setTxt(doc,"#828282");
+            doc.text(`${Math.round((amount/vr)*100)}%`,mg+36+maxW+2,y+4);
           }
           y+=9;
         });

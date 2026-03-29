@@ -87,6 +87,8 @@ export default function AjustesPage() {
 
   // ── CUENTA handlers ──────────────────────────────────────────────────────
   async function handleLogout() {
+    const ok = await confirm({ title: "¿Cerrar sesión?", message: "Se cerrará tu sesión en este dispositivo.", danger: true });
+    if (!ok) return;
     await createClient().auth.signOut();
     router.push("/auth/login");
     router.refresh();

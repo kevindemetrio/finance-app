@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur } from "../lib/data";
+import { Goal, createGoal, deleteGoal, loadGoals, updateGoal, fmtEur, addGoalContribution, todayStr } from "../lib/data";
+import { GoalContributions } from "../components/GoalContributions";
 import { createClient } from "../lib/supabase/client";
 
 import { Navbar, DesktopTabs } from "../components/Navbar";
@@ -91,7 +92,7 @@ export default function MetasPage() {
     if (isNaN(a) || a === 0) return;
     const dir = addDirection[goal.id] ?? "add";
     const delta = dir === "sub" ? -a : a;
-    await updateGoal(goal.id, { savedAmount: goal.savedAmount + delta });
+    await addGoalContribution(goal.id, delta, todayStr());
     setAddAmount(p => ({ ...p, [goal.id]: "" }));
     setEditingId(null);
     toast(dir === "sub" ? "Retirada registrada" : "Ahorro registrado");
@@ -322,6 +323,12 @@ export default function MetasPage() {
                       </div>
                     </div>
                   )}
+
+                  <GoalContributions
+                    goalId={goal.id}
+                    goalColor={goal.color ?? GOAL_COLORS[0]}
+                    onSavedAmountChange={reload}
+                  />
                 </div>
               );
             })}
