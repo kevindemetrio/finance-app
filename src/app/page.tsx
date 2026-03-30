@@ -447,7 +447,7 @@ export default function HomePage() {
                 );
               })}
             </div>
-            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
+            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} disabled={!canWrite} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
           </>
         )}
       </div>

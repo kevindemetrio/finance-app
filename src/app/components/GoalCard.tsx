@@ -15,9 +15,10 @@ interface Props {
   goal: Goal;
   onDelete: (id: string) => void;
   onSavedAmountChange: () => void;
+  readOnly?: boolean;
 }
 
-export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
+export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Props) {
   const lsKey = `goal_open_${goal.id}`;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -49,6 +50,11 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
     loadGoalContributions(goal.id).then(c => { setContributions(c); setLoadingContribs(false); });
   }, [open, goal.id]);
 
+  // Close edit/add forms if readOnly becomes true
+  useEffect(() => {
+    if (readOnly) { setEditing(false); setAddingContrib(false); }
+  }, [readOnly]);
+
   function toggle() {
     setOpen(prev => {
       const next = !prev;
@@ -58,6 +64,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
   }
 
   function openEdit() {
+    if (readOnly) { toast("Tu prueba ha terminado. Activa un plan para continuar.", "info"); return; }
     setEditName(goal.name);
     setEditTarget(String(goal.targetAmount));
     setEditDate(goal.deadline ?? "");
@@ -103,6 +110,16 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
     onSavedAmountChange();
   }
 
+  function handleDelete() {
+    if (readOnly) { toast("Tu prueba ha terminado. Activa un plan para continuar.", "info"); return; }
+    onDelete(goal.id);
+  }
+
+  function handleAddContribClick() {
+    if (readOnly) { toast("Tu prueba ha terminado. Activa un plan para continuar.", "info"); return; }
+    setAddingContrib(true);
+  }
+
   const color = goal.color ?? GOAL_COLORS[0];
   const pct = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
   const done = goal.savedAmount >= goal.targetAmount;
@@ -116,8 +133,21 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
         <span className="text-sm font-bold shrink-0 tabular-nums" style={{ color }}>
           {fmtEur(goal.savedAmount)}
         </span>
-        <IconButton onClick={openEdit} title="Editar meta"><PencilIcon /></IconButton>
-        <IconButton danger onClick={() => onDelete(goal.id)} title="Eliminar meta"><XIcon /></IconButton>
+        <IconButton
+          onClick={openEdit}
+          title={readOnly ? "No disponible" : "Editar meta"}
+          className={readOnly ? "opacity-40 cursor-not-allowed" : undefined}
+        >
+          <PencilIcon />
+        </IconButton>
+        <IconButton
+          danger
+          onClick={handleDelete}
+          title={readOnly ? "No disponible" : "Eliminar meta"}
+          className={readOnly ? "opacity-40 cursor-not-allowed" : undefined}
+        >
+          <XIcon />
+        </IconButton>
       </div>
 
       {/* ── Progress — siempre visible ──────────────────────────────────── */}
@@ -162,7 +192,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
         <div className="border-t border-neutral-100 dark:border-neutral-800">
 
           {/* ── Edit form ──────────────────────────────────────────────── */}
-          {editing && (
+          {editing && !readOnly && (
             <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/40 border-b border-neutral-100 dark:border-neutral-800 space-y-2">
               <p className="text-xs font-medium text-brand-blue mb-1">Editar meta</p>
               <div className="grid grid-cols-2 gap-2">
@@ -189,8 +219,9 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
           <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
             {!addingContrib ? (
               <button
-                onClick={() => setAddingContrib(true)}
-                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white"
+                onClick={handleAddContribClick}
+                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white
+                  ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
                 style={{ background: color }}
               >
                 + Añadir aportación
@@ -252,9 +283,11 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange }: Props) {
                       <span className="text-xs font-semibold shrink-0 tabular-nums" style={{ color }}>
                         +{fmtEur(c.amount)}
                       </span>
-                      <IconButton danger onClick={() => handleDeleteContrib(c)}>
-                        <XSmIcon />
-                      </IconButton>
+                      {!readOnly && (
+                        <IconButton danger onClick={() => handleDeleteContrib(c)}>
+                          <XSmIcon />
+                        </IconButton>
+                      )}
                     </div>
                   ))}
               </div>

@@ -12,6 +12,7 @@ import { GhostButton, PrimaryButton, SaveButton, TextInput } from "../components
 import { SettingsPanel } from "../components/SettingsPanel";
 import { GoalCard } from "../components/GoalCard";
 import { useUserSettings } from "../lib/userSettings";
+import { usePlan } from "../hooks/usePlan";
 
 const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
 const GOALS_ORDER_KEY = "finanzas_goals_order";
@@ -23,6 +24,7 @@ export default function MetasPage() {
   const [userEmail, setUserEmail]   = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const { settings, update: updateSettings } = useUserSettings();
+  const { canWrite, goalsLimit, effectivePlan, loading: planLoading } = usePlan();
 
   // New goal form
   const [newName, setNewName]     = useState("");
@@ -50,6 +52,11 @@ export default function MetasPage() {
     });
   }, [reload]);
 
+  // Gates — don't apply while plan is loading
+  const writeBlocked   = !planLoading && !canWrite;
+  const limitReached   = !planLoading && effectivePlan === "basic" && goals.length >= goalsLimit;
+  const newGoalBlocked = writeBlocked || limitReached;
+
   function saveGoalOrder(order: string[]) {
     setGoalOrder(order);
     try { localStorage.setItem(GOALS_ORDER_KEY, JSON.stringify(order)); } catch {}
@@ -65,6 +72,18 @@ export default function MetasPage() {
       try { localStorage.setItem(GOALS_ORDER_KEY, JSON.stringify(order)); } catch {}
       return order;
     });
+  }
+
+  function handleNewMetaClick() {
+    if (writeBlocked) {
+      toast("Tu prueba ha terminado. Activa un plan para continuar.", "info");
+      return;
+    }
+    if (limitReached) {
+      toast("Actualiza a Pro para crear metas ilimitadas", "info");
+      return;
+    }
+    setAdding(a => !a);
   }
 
   async function handleCreate() {
@@ -150,10 +169,17 @@ export default function MetasPage() {
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Metas de ahorro</h2>
-          <PrimaryButton onClick={() => setAdding(a => !a)}>+ Nueva meta</PrimaryButton>
+          <button
+            onClick={handleNewMetaClick}
+            className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-xl transition-colors
+              bg-brand-blue text-white hover:bg-blue-600
+              ${newGoalBlocked ? "opacity-40 cursor-not-allowed" : ""}`}
+          >
+            + Nueva meta
+          </button>
         </div>
 
-        {adding && (
+        {adding && !newGoalBlocked && (
           <div className="card p-4 mb-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -202,6 +228,7 @@ export default function MetasPage() {
                 goal={goal}
                 onDelete={handleDelete}
                 onSavedAmountChange={reload}
+                readOnly={writeBlocked}
               />
             ))}
           </div>

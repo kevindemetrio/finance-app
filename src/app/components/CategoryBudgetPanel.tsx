@@ -5,6 +5,7 @@ import { Category, CategoryBudget, Entry, fmtEur, saveCategoryBudget, saveMonthC
 import { GhostButton, SaveButton, TextInput } from "./ui";
 import { useTheme, SEASON_CONFIG } from "./ThemeProvider";
 import { useCategories } from "./CategoriesProvider";
+import { toast } from "./Toast";
 
 interface Props {
   year: number;
@@ -12,6 +13,7 @@ interface Props {
   varExpenses: Entry[];
   budgets: CategoryBudget[];
   varBudget: number;
+  disabled?: boolean;
   onChange: (updated: CategoryBudget[]) => void;
   onVarBudgetChange: (v: number) => void;
 }
@@ -34,7 +36,7 @@ function Bar({ pct, over, warn }: { pct: number; over: boolean; warn: boolean })
 }
 
 export function CategoryBudgetPanel({
-  year, month, varExpenses, budgets, varBudget, onChange, onVarBudgetChange,
+  year, month, varExpenses, budgets, varBudget, disabled, onChange, onVarBudgetChange,
 }: Props) {
   const lsKey = "budget_panel_open";
   const [open, setOpen]             = useState(true);
@@ -48,6 +50,11 @@ export function CategoryBudgetPanel({
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
   }, []);
+
+  // Close any open edit forms if disabled becomes true
+  useEffect(() => {
+    if (disabled) setEditingCat(null);
+  }, [disabled]);
 
   function toggle() {
     setOpen(prev => {
@@ -94,6 +101,10 @@ export function CategoryBudgetPanel({
   }
 
   function startEdit(key: Category | "global", currentVal: number) {
+    if (disabled) {
+      toast("Tu prueba ha terminado. Activa un plan para continuar.", "info");
+      return;
+    }
     setEditingCat(key);
     setEditVal(currentVal > 0 ? String(currentVal) : "");
   }
@@ -138,9 +149,10 @@ export function CategoryBudgetPanel({
               </span>
               <button
                 onClick={() => startEdit("global", varBudget)}
-                className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
+                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg
                   text-brand-blue bg-brand-blue-light dark:bg-blue-950/60
-                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
+                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors
+                  ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
               >
                 {varBudget > 0 ? <><EditIcon />{" "}Editar</> : <><PlusSmIcon />{" "}Definir</>}
               </button>
@@ -222,11 +234,12 @@ export function CategoryBudgetPanel({
                           <button
                             onClick={() => startEdit(cat, budget)}
                             className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md transition-colors ml-1 shrink-0
+                              ${disabled ? "opacity-40 cursor-not-allowed" : ""}
                               ${budget > 0
                                 ? "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                 : "text-brand-blue bg-brand-blue-light dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60"
                               }`}
-                            title={budget > 0 ? "Editar límite" : "Añadir límite"}
+                            title={disabled ? "No disponible" : budget > 0 ? "Editar límite" : "Añadir límite"}
                           >
                             {budget > 0 ? <><PencilIcon />{" "}Editar</> : <>+ límite</>}
                           </button>
@@ -249,9 +262,16 @@ export function CategoryBudgetPanel({
           {categories.filter(c => !activeCats.includes(c)).length > 0 && (
             <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-800">
               <select
-                className="input-base text-xs w-full"
+                className={`input-base text-xs w-full ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                 value=""
-                onChange={e => { if (e.target.value) startEdit(e.target.value as Category, 0); }}
+                disabled={disabled}
+                onChange={e => {
+                  if (disabled) {
+                    toast("Tu prueba ha terminado. Activa un plan para continuar.", "info");
+                    return;
+                  }
+                  if (e.target.value) startEdit(e.target.value as Category, 0);
+                }}
               >
                 <option value="">+ Añadir límite a otra categoría...</option>
                 {categories.filter(c => !activeCats.includes(c)).map(c => (
