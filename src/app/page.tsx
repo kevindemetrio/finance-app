@@ -221,19 +221,21 @@ export default function HomePage() {
   const fixedBodyHeader = (
     <>
       <button
-        onClick={() => setShowTemplate(true)}
-        className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400
+        onClick={() => { if (canWrite) setShowTemplate(true); }}
+        className={`flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400
           border border-neutral-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 transition-colors
-          hover:text-neutral-700 dark:hover:text-neutral-200 hover:border-neutral-400"
+          hover:text-neutral-700 dark:hover:text-neutral-200 hover:border-neutral-400
+          ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
       >
         <GridIcon /> Plantilla
       </button>
       <button
         onClick={handleImportTemplate}
         disabled={importing}
-        className="flex items-center gap-1.5 text-xs text-brand-amber
+        className={`flex items-center gap-1.5 text-xs text-brand-amber
           border border-brand-amber rounded-lg px-2.5 py-1.5
-          hover:bg-brand-amber-light dark:hover:bg-amber-950 transition-colors disabled:opacity-50"
+          hover:bg-brand-amber-light dark:hover:bg-amber-950 transition-colors disabled:opacity-50
+          ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
       >
         <ImportIcon />
         {importing ? "..." : "Importar plantilla"}
