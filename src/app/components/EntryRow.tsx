@@ -16,6 +16,7 @@ interface Props {
   showDate?: boolean;
   showNotes?: boolean;
   showName?: boolean;
+  readOnly?: boolean;
   onUpdate: (updated: Entry) => void;
   onDelete: () => void;
 }
@@ -44,7 +45,7 @@ export function CategoryBadge({ cat }: { cat: string }) {
   );
 }
 
-export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCategory, showDate = true, showNotes = true, showName = true, onUpdate, onDelete }: Props) {
+export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCategory, showDate = true, showNotes = true, showName = true, readOnly, onUpdate, onDelete }: Props) {
   const { categories } = useCategories();
   const [editing, setEditing]   = useState(false);
   const [name, setName]         = useState(entry.name);
@@ -91,7 +92,10 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
         {showCategory && entry.category && <span className="pt-0.5"><CategoryBadge cat={entry.category} /></span>}
         {showPaid && (
           <span className="pt-0.5">
-            <Badge variant={entry.paid ? "paid" : "pending"} onClick={() => onUpdate({ ...entry, paid: !entry.paid })} />
+            <Badge
+              variant={entry.paid ? "paid" : "pending"}
+              onClick={readOnly ? undefined : () => onUpdate({ ...entry, paid: !entry.paid })}
+            />
           </span>
         )}
         <span
@@ -100,13 +104,15 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
         >
           {displaySign}{fmtEur(displayAmount)}
         </span>
-        <div className="flex items-center pt-0.5">
-          <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-          <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center pt-0.5">
+            <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
+            <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
+          </div>
+        )}
       </div>
 
-      {editing && (
+      {editing && !readOnly && (
         <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/40
           border-l-2 border-brand-blue border-b border-neutral-100 dark:border-neutral-800">
           <p className="w-full text-xs font-medium text-brand-blue mb-1">Editando: {entry.name}</p>

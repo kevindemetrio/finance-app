@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CategoryBudget, MonthData } from "../lib/data";
+import { toast } from "./Toast";
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const PALETTE = ["#E24B4A","#1D9E75","#378ADD","#BA7517","#7F77DD","#D85A30","#D4537E","#639922","#00838F","#888780"];
@@ -30,12 +31,17 @@ interface Props {
   totalSavings: number;
   categoryBudgets: CategoryBudget[];
   carryover: number;
+  disabled?: boolean;
 }
 
-export function PdfReportButton({ year, month, data, totalSavings, categoryBudgets, carryover }: Props) {
+export function PdfReportButton({ year, month, data, totalSavings, categoryBudgets, carryover, disabled }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function generatePdf() {
+    if (disabled) {
+      toast("Actualiza tu plan para exportar PDF", "info");
+      return;
+    }
     setLoading(true);
     try {
       const { jsPDF } = await import("jspdf");
@@ -412,7 +418,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       doc.save(`finanzas-${year}-${String(month+1).padStart(2,"0")}.pdf`);
     } catch(err) {
       console.error("PDF error:", err);
-      alert(`Error generando el PDF: ${err instanceof Error ? err.message : String(err)}`);
+      toast(`Error generando el PDF: ${err instanceof Error ? err.message : String(err)}`, "error");
     } finally {
       setLoading(false);
     }
@@ -421,13 +427,18 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
   return (
     <button onClick={generatePdf} disabled={loading}
       data-tour="pdf-button"
-      className="w-9 h-9 flex items-center justify-center rounded-xl
+      className={`relative w-9 h-9 flex items-center justify-center rounded-xl
         text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800
         hover:text-neutral-700 dark:hover:text-neutral-200
-        transition-colors disabled:opacity-50"
-      title="Descargar informe PDF del mes"
+        transition-colors disabled:opacity-50 ${disabled ? "opacity-40" : ""}`}
+      title={disabled ? "Disponible en plan Pro" : "Descargar informe PDF del mes"}
     >
       {loading ? <span className="animate-pulse"><PdfIcon /></span> : <PdfIcon />}
+      {disabled && (
+        <span className="absolute bottom-1 right-1 text-neutral-500 dark:text-neutral-400">
+          <LockIcon />
+        </span>
+      )}
     </button>
   );
 }
@@ -441,4 +452,7 @@ function PdfIcon() {
       <line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
   );
+}
+function LockIcon() {
+  return <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
 }

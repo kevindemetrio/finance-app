@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Entry, MonthData, CategoryBudget, getAllTimeSavings, getCarryover,
   loadMonth, saveEntry, deleteEntry, saveMonthConfig,
@@ -22,6 +23,7 @@ import { PdfReportButton } from "./components/PdfReportButton";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { AppTour } from "./components/AppTour";
 import { useUserSettings, SectionKey } from "./lib/userSettings";
+import { usePlan } from "./hooks/usePlan";
 
 function emptyMonth(): MonthData {
   return { incomes:[], fixedExpenses:[], varExpenses:[], savingsEntries:[], varBudget:0, carryover:0 };
@@ -30,11 +32,17 @@ function emptyMonth(): MonthData {
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export default function HomePage() {
+  const router = useRouter();
   const { theme, season } = useTheme();
   const isSeason = theme === "season";
   const today = new Date();
   const [year, setYear]              = useState(today.getFullYear());
   const [month, setMonth]            = useState(today.getMonth());
+
+  const {
+    canWrite, canUsePdf, canSearchCrossMes,
+    historyMonthsLimit, loading: planLoading,
+  } = usePlan();
 
   // Restore last viewed month on mount
   useEffect(() => {
@@ -62,6 +70,10 @@ export default function HomePage() {
   const fetchId = useRef(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
+  // How many months back is the viewed month relative to today
+  const monthsBack = (today.getFullYear() - year) * 12 + (today.getMonth() - month);
+  const historyBlocked = !planLoading && isFinite(historyMonthsLimit) && monthsBack > historyMonthsLimit;
+
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
@@ -84,6 +96,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (historyBlocked) {
+      setLoading(false);
+      setError("");
+      setData(emptyMonth());
+      return;
+    }
     const id = ++fetchId.current;
     setLoading(true); setError("");
     Promise.all([loadMonth(year, month), getCarryover(year, month), getAllTimeSavings(year, month), loadCategoryBudgets(year, month)])
@@ -95,7 +113,7 @@ export default function HomePage() {
       .catch(() => {
         if (id === fetchId.current) { setError("Error cargando datos."); setLoading(false); }
       });
-  }, [year, month]);
+  }, [year, month, historyBlocked]);
 
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -111,7 +129,7 @@ export default function HomePage() {
   async function handleImportTemplate() {
     if (importing) return;
     setImporting(true);
-   
+
     const newEntries = await importTemplates(year, month);
     if (newEntries.length > 0) {
       setData(d => ({ ...d, fixedExpenses: [...d.fixedExpenses, ...newEntries] }));
@@ -247,7 +265,7 @@ export default function HomePage() {
             <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-xl leading-none">›</button>
           </div>
           <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">
-            <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} />
+            <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} disabled={!canUsePdf} />
             <ThemeToggle />
             {/* stopPropagation on mousedown so SettingsPanel's outside-click handler doesn't fire when clicking this button */}
             <div className="relative" onMouseDown={e => e.stopPropagation()}>
@@ -279,7 +297,7 @@ export default function HomePage() {
         {/* Search */}
         <div className="relative mb-4">
           <div
-            className={`flex items-center gap-2 rounded-xl px-3 py-2.5 border transition-colors ${!isSeason ? "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800" : ""}`}
+            className={`flex items-center gap-2 rounded-xl px-3 py-2.5 border transition-colors ${!isSeason ? "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800" : ""} ${!canSearchCrossMes ? "opacity-50" : ""}`}
             style={isSeason ? {
               background: SEASON_CONFIG[season].metricBg,
               backdropFilter: "blur(10px)",
@@ -288,13 +306,17 @@ export default function HomePage() {
             } : undefined}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-neutral-400 shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar movimientos o categorías..."
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={canSearchCrossMes ? "Buscar movimientos o categorías..." : "Búsqueda disponible en Pro"}
+              disabled={!canSearchCrossMes}
               style={isSeason ? { color: SEASON_CONFIG[season].titleColor } : undefined}
-              className="flex-1 text-sm bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400" />
-            {search && <button onClick={() => { setSearch(""); setSearchResults([]); }} className="text-neutral-400 hover:text-neutral-600 text-lg leading-none">×</button>}
+              className="flex-1 text-sm bg-transparent outline-none text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 disabled:cursor-not-allowed"
+            />
+            {search && canSearchCrossMes && <button onClick={() => { setSearch(""); setSearchResults([]); }} className="text-neutral-400 hover:text-neutral-600 text-lg leading-none">×</button>}
           </div>
-          {search && (
+          {search && canSearchCrossMes && (
             <div
               className={`absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-20 ${!isSeason ? "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-lg" : ""}`}
               style={isSeason ? {
@@ -364,6 +386,26 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+        ) : historyBlocked ? (
+          <div className="card px-6 py-10 flex flex-col items-center gap-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 dark:text-neutral-600">
+              <HistoryIcon />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+                Actualiza tu plan para ver el historial completo
+              </p>
+              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                Solo se muestran los últimos 3 meses en el plan Basic
+              </p>
+            </div>
+            <button
+              onClick={() => router.push("/pricing")}
+              className="text-sm font-semibold px-4 py-2 rounded-xl bg-brand-blue text-white hover:bg-blue-600 transition-colors"
+            >
+              Ver planes
+            </button>
+          </div>
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
@@ -377,14 +419,14 @@ export default function HomePage() {
                   <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
                     entries={data.incomes} storageKey="incomes" tourId="income"
                     accentHex={sectionColors["incomes"]}
-                    showCategory={prefs.showCategory} showPaid={false} {...common}
+                    showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
                     onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
                 );
                 if (key === "savings") return (
                   <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
                     entries={data.savingsEntries} storageKey="savings" tourId="savings"
                     accentHex={sectionColors["savings"]}
-                    showCategory={prefs.showCategory} showPaid={false} {...common}
+                    showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
                     bodyHeader={savingsBodyHeader}
                     onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
                 );
@@ -392,7 +434,7 @@ export default function HomePage() {
                   <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
                     entries={data.fixedExpenses} storageKey="fixed" tourId="fixed"
                     accentHex={sectionColors["fixedExpenses"]}
-                    showPaid={prefs.showPaid} showCategory={prefs.showCategory} {...common}
+                    showPaid={prefs.showPaid} showCategory={prefs.showCategory} disabled={!canWrite} {...common}
                     bodyHeader={fixedBodyHeader}
                     onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
                 );
@@ -400,7 +442,7 @@ export default function HomePage() {
                   <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
                     entries={data.varExpenses} storageKey="variable" tourId="variable"
                     accentHex={sectionColors["varExpenses"]}
-                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} {...common}
+                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} disabled={!canWrite} {...common}
                     onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
                 );
               })}
@@ -424,4 +466,7 @@ function GridIcon() {
 }
 function ImportIcon() {
   return <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="21" x2="12" y2="3"/></svg>;
+}
+function HistoryIcon() {
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
 }

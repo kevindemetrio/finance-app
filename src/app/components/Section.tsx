@@ -18,6 +18,7 @@ interface Props {
   showDate?: boolean;
   showNotes?: boolean;
   showName?: boolean;
+  disabled?: boolean;
   emptyMessage?: string;
   headerAfter?: React.ReactNode;
   bodyHeader?: React.ReactNode;
@@ -30,7 +31,7 @@ interface Props {
 
 export function Section({
   title, dotColor, totalColor, accentHex, sign, entries, showPaid, defaultPaid, showCategory,
-  showDate, showNotes, showName,
+  showDate, showNotes, showName, disabled,
   emptyMessage, headerAfter, bodyHeader, storageKey, tourId, onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
@@ -102,8 +103,10 @@ export function Section({
           <>
             {headerAfter}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
-              <button onClick={() => setShowModal(true)}
+              <button
+                onClick={() => { if (!disabled) setShowModal(true); }}
                 className={`flex items-center gap-1.5 text-sm font-medium rounded-xl px-3 py-1.5 transition-colors
+                  ${disabled ? "opacity-40 cursor-not-allowed" : ""}
                   ${!accentHex ? "text-brand-blue bg-brand-blue-light dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-950" : ""}`}
                 style={accentHex ? { color: accentHex, background: `${accentHex}18` } : undefined}
               >
@@ -114,7 +117,7 @@ export function Section({
 
             {entries.length === 0 ? (
               <div className="px-4 py-10 text-center flex flex-col items-center gap-3 bg-neutral-50/40 dark:bg-neutral-800/10">
-                <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 dark:text-neutral-600">
+                <div className={`w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-300 dark:text-neutral-600 ${disabled ? "opacity-40" : ""}`}>
                   <PlusIcon size={16} />
                 </div>
                 <div>
@@ -122,7 +125,7 @@ export function Section({
                     {emptyMessage || `Sin ${title.toLowerCase()} este mes`}
                   </p>
                   <p className="text-xs text-neutral-300 dark:text-neutral-700 mt-0.5">
-                    Pulsa Añadir para registrar el primero
+                    {disabled ? "Solo lectura en tu plan actual" : "Pulsa Añadir para registrar el primero"}
                   </p>
                 </div>
               </div>
@@ -136,6 +139,7 @@ export function Section({
                       accentHex={accentHex}
                       showPaid={showPaid} showCategory={showCategory}
                       showDate={showDate} showNotes={showNotes} showName={showName}
+                      readOnly={disabled}
                       onUpdate={updated => onUpdate(idx, updated)}
                       onDelete={() => onDelete(idx)}
                     />
