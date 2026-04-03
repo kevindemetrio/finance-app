@@ -9,11 +9,11 @@ import { TrialBanner } from "./components/TrialBanner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
 export const metadata: Metadata = {
-  title: "Finanzas",
-  description: "Tu gestor de finanzas personales",
+  title: "Spenfly",
+  description: "Spenfly — Tu gestor de finanzas personales",
   manifest: "/manifest.json",
   icons: { icon: [{ url: "/favicon.png", type: "image/png" }], apple: "/icon-192.png" },
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Finanzas" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Spenfly" },
   other: { "mobile-web-app-capable": "yes" },
 };
 

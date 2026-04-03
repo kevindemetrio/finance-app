@@ -126,12 +126,17 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="text-center mb-7">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: accentColor }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 21 L22 10 L18 23 Z" fill="white"/>
+                <path d="M22 10 L18 23 L19.5 16.5 Z" fill="rgba(0,0,0,0.18)"/>
+                <path d="M8 21 L19.5 16.5 L22 10 Z" fill="rgba(255,255,255,0.45)"/>
+                <line x1="22.5" y1="9.5" x2="25.5" y2="6.5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" strokeDasharray="1.5,1.5" strokeLinecap="round"/>
+                <circle cx="26.2" cy="5.8" r="1.2" fill="rgba(255,255,255,0.45)"/>
               </svg>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: textPrimary }}>Finanzas</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span style={{ color: textPrimary }}>spen</span><span style={{ color: accentColor }}>fly</span>
+            </h1>
             <p className="text-sm mt-1" style={{ color: textMuted }}>Tu dinero, bajo control</p>
           </div>
 

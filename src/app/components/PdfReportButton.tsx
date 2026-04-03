@@ -164,9 +164,9 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       setFill(doc,"#ffffff"); setDraw(doc,"#ffffff"); doc.setLineWidth(0.5);
       doc.roundedRect(mg+1,15,14,14,3,3,"S");
       doc.setFontSize(11); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
-      doc.text("€",mg+8,25.5,{align:"center"});
+      doc.text("S",mg+8,25.5,{align:"center"});
       doc.setFontSize(21); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
-      doc.text("Finanzas",mg+21,18);
+      doc.text("Spenfly",mg+21,18);
       doc.setFontSize(10); doc.setFont("helvetica","normal");
       doc.text(`Informe mensual · ${MONTH_NAMES[month]} ${year}`,mg+21,27);
       doc.setFontSize(7.5);
@@ -411,7 +411,7 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
         doc.setPage(p);
         setFill(doc,"#f4f9f4"); doc.rect(0,H-9,W,9,"F");
         doc.setFontSize(7); doc.setFont("helvetica","normal"); setTxt(doc,"#a0a0a0");
-        doc.text(`Finanzas · ${MONTH_NAMES[month]} ${year}`,mg,H-3);
+        doc.text(`Spenfly · ${MONTH_NAMES[month]} ${year}`,mg,H-3);
         doc.text(`${p} / ${np}`,W-mg,H-3,{align:"right"});
       }
 
