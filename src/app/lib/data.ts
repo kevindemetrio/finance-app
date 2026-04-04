@@ -167,16 +167,56 @@ export function calcBalance(data: MonthData): number {
   return sum(data.incomes) + (data.carryover ?? 0) - paidFixed - paidVar - sum(data.savingsEntries);
 }
 
-export async function getCarryover(year: number, month: number, depth = 0): Promise<number> {
-  if (depth > 24) return 0;
-  let py = year, pm = month - 1;
-  if (pm < 0) { py--; pm = 11; }
-  const prev = await loadMonth(py, pm);
-  const isEmpty = !prev.incomes.length && !prev.fixedExpenses.length && !prev.varExpenses.length && !prev.savingsEntries.length;
-  if (isEmpty) return 0;
-  prev.carryover = await getCarryover(py, pm, depth + 1);
-  const b = calcBalance(prev);
-  return b > 0 ? b : 0;
+export async function getCarryover(year: number, month: number): Promise<number> {
+  const supabase = createClient();
+
+  // Una sola query: todas las entries anteriores al mes actual
+  // ordenadas por año y mes descendente, máximo 24 meses atrás
+  const { data } = await supabase
+    .from("entries")
+    .select("type, amount, year, month")
+    .or(
+      `year.lt.${year},and(year.eq.${year},month.lt.${month})`
+    )
+    .order("year", { ascending: false })
+    .order("month", { ascending: false })
+    .limit(2000); // suficiente para 24 meses con muchas entradas
+
+  if (!data || data.length === 0) return 0;
+
+  // Agrupar entries por mes
+  const monthMap = new Map<string, { incomes: number; fixed: number; variable: number; savings: number }>();
+
+  for (const row of data) {
+    const key = `${row.year}-${row.month}`;
+    if (!monthMap.has(key)) {
+      monthMap.set(key, { incomes: 0, fixed: 0, variable: 0, savings: 0 });
+    }
+    const m = monthMap.get(key)!;
+    const amount = Number(row.amount);
+    if (row.type === "income")   m.incomes  += amount;
+    if (row.type === "fixed")    m.fixed    += amount;
+    if (row.type === "variable") m.variable += amount;
+    if (row.type === "saving")   m.savings  += amount;
+  }
+
+  if (monthMap.size === 0) return 0;
+
+  // Ordenar meses cronológicamente (más antiguo primero)
+  const sortedMonths = Array.from(monthMap.entries()).sort((a, b) => {
+    const [ay, am] = a[0].split("-").map(Number);
+    const [by, bm] = b[0].split("-").map(Number);
+    return ay !== by ? ay - by : am - bm;
+  });
+
+  // Calcular carryover acumulado mes a mes en memoria
+  let carryover = 0;
+  for (const [, m] of sortedMonths) {
+    const balance = m.incomes + carryover - m.fixed - m.variable - m.savings;
+    carryover = balance > 0 ? balance : 0;
+  }
+
+  return carryover;
 }
 
 // ─── Annual & category data ───────────────────────────────────────────────────
