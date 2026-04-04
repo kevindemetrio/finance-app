@@ -152,17 +152,17 @@ export default function MetasPage() {
 
         {goals.length > 0 && (
           <div className="grid grid-cols-3 gap-2.5 mb-5">
-            <div className="rounded-xl p-4 border-l-[3px] border-l-brand-blue bg-[#E1F5EE] dark:bg-neutral-800/60">
-              <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold text-[#0F6E56] dark:text-neutral-500">Activas</p>
-              <p className="text-base font-bold">{goals.filter(g => g.savedAmount < g.targetAmount).length}</p>
+            <div className="metric-card">
+              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Activas</p>
+              <p className="text-base font-medium">{goals.filter(g => g.savedAmount < g.targetAmount).length}</p>
             </div>
-            <div className="rounded-xl p-4 border-l-[3px] border-l-brand-green bg-[#E1F5EE] dark:bg-neutral-800/60">
-              <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold text-[#0F6E56] dark:text-neutral-500">Completadas</p>
-              <p className="text-base font-bold text-brand-green">{goals.filter(g => g.savedAmount >= g.targetAmount).length}</p>
+            <div className="metric-card">
+              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Completadas</p>
+              <p className="text-base font-medium text-brand-green">{goals.filter(g => g.savedAmount >= g.targetAmount).length}</p>
             </div>
-            <div className="rounded-xl p-4 border-l-[3px] border-l-brand-amber bg-[#FAEEDA] dark:bg-neutral-800/60">
-              <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold text-[#854F0B] dark:text-neutral-500">Total objetivo</p>
-              <p className="text-base font-bold">{fmtEur(goals.reduce((a,g)=>a+g.targetAmount,0))}</p>
+            <div className="metric-card">
+              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Total objetivo</p>
+              <p className="text-base font-medium">{fmtEur(goals.reduce((a,g)=>a+g.targetAmount,0))}</p>
             </div>
           </div>
         )}

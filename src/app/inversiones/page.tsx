@@ -26,27 +26,6 @@ const CAT_HEX: Record<InvestmentCategory, string> = {
   stock:     "#E24B4A",
 };
 
-// Left border matches CATEGORY_COLORS text color for coherence
-const ACCENT_STYLE: Record<InvestmentCategory, string> = {
-  emergency: "border-l-brand-blue",
-  variable:  "border-l-brand-green",
-  fixed:     "border-l-brand-amber",
-  stock:     "border-l-brand-red",
-};
-
-const CAT_PASTEL_BG: Record<InvestmentCategory, string> = {
-  emergency: "#E6F1FB",
-  variable:  "#E1F5EE",
-  fixed:     "#FAEEDA",
-  stock:     "#FCEBEB",
-};
-
-const CAT_LABEL_COLOR: Record<InvestmentCategory, string> = {
-  emergency: "#185FA5",
-  variable:  "#0F6E56",
-  fixed:     "#854F0B",
-  stock:     "#A32D2D",
-};
 
 export default function InversionesPage() {
   const router = useRouter();
@@ -209,18 +188,14 @@ export default function InversionesPage() {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
             return (
-              <div
-                key={cat}
-                className={`rounded-xl p-4 border-l-[3px] ${ACCENT_STYLE[cat]} dark:bg-neutral-800/60`}
-                style={{ backgroundColor: CAT_PASTEL_BG[cat] }}
-              >
-                <p
-                  className="text-[10px] uppercase tracking-widest mb-1.5 font-bold truncate dark:text-neutral-500"
-                  style={{ color: CAT_LABEL_COLOR[cat] }}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </p>
-                <p className={`text-base font-bold ${colors.text}`}>{fmtEur(total)}</p>
+              <div key={cat} className="metric-card">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
+                  <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                    {CATEGORY_LABELS[cat]}
+                  </p>
+                </div>
+                <p className={`text-base font-medium ${colors.text}`}>{fmtEur(total)}</p>
                 <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
                   {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
                 </p>

@@ -358,11 +358,7 @@ export default function AjustesPage() {
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between last:border-0">
-                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
-                    Ver planes
-                  </Link>
-                </div>
+                <VerPlanesButton />
               </>
             ) : planInfo.trialExpired ? (
               <>
@@ -373,11 +369,7 @@ export default function AjustesPage() {
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-brand-red">EXPIRADO</span>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between last:border-0">
-                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
-                    Ver planes
-                  </Link>
-                </div>
+                <VerPlanesButton />
               </>
             ) : planInfo.status === "past_due" || planInfo.status === "canceled" ? (
               <>
@@ -390,7 +382,7 @@ export default function AjustesPage() {
                     {planInfo.status === "past_due" ? "PAGO PENDIENTE" : "CANCELADO"}
                   </span>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <button
                     onClick={handleManageSubscription}
                     disabled={loadingPortal}
@@ -399,11 +391,7 @@ export default function AjustesPage() {
                     {loadingPortal ? "Abriendo..." : "Gestionar suscripción"}
                   </button>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between last:border-0">
-                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
-                    Ver planes
-                  </Link>
-                </div>
+                <VerPlanesButton />
               </>
             ) : planInfo.effectivePlan === "basic" && planInfo.status === "active" ? (
               <>
@@ -416,7 +404,7 @@ export default function AjustesPage() {
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <button
                     onClick={handleManageSubscription}
                     disabled={loadingPortal}
@@ -425,11 +413,7 @@ export default function AjustesPage() {
                     {loadingPortal ? "Abriendo…" : "Gestionar suscripción"}
                   </button>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between last:border-0">
-                  <Link href="/pricing" className="text-xs text-brand-green hover:underline">
-                    Cambiar a Pro →
-                  </Link>
-                </div>
+                <VerPlanesButton />
               </>
             ) : planInfo.effectivePlan === "pro" && planInfo.status === "active" ? (
               <>
@@ -442,7 +426,7 @@ export default function AjustesPage() {
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
                 </div>
-                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <button
                     onClick={handleManageSubscription}
                     disabled={loadingPortal}
@@ -451,6 +435,7 @@ export default function AjustesPage() {
                     {loadingPortal ? "Abriendo…" : "Gestionar suscripción"}
                   </button>
                 </div>
+                <VerPlanesButton />
               </>
             ) : null}
           </SettingsCard>
@@ -836,4 +821,23 @@ function AjGridIcon() {
 }
 function AjTourIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+}
+function VerPlanesButton() {
+  return (
+    <div className="px-4 pb-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+      <Link
+        href="/pricing"
+        className="flex items-center justify-center gap-1.5 w-full text-xs font-medium
+          px-3 py-2 rounded-lg border border-brand-green text-brand-green
+          hover:bg-brand-green-light dark:hover:bg-green-950 transition-colors"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        Ver planes
+      </Link>
+    </div>
+  );
 }
