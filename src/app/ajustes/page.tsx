@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
+import { usePlan } from "../hooks/usePlan";
 import { createCategory, deleteCategory, loadCategories, loadGoals, Goal } from "../lib/data";
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
@@ -79,6 +81,11 @@ export default function AjustesPage() {
   const [invOrder, setInvOrder] = useState<string[]>(INV_CATS_META.map(c => c.key));
   const [invOpen, setInvOpen] = useState<string | null>(null);
 
+  // ── SUSCRIPCIÓN ─────────────────────────────────────────────────────────
+  const planInfo = usePlan();
+  const [loadingPortal, setLoadingPortal] = useState(false);
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+
   // ── FINANZAS — section order + fields ──────────────────────────────────
   const { settings, update: updateSettings } = useUserSettings();
   const [activeFieldSection, setActiveFieldSection] = useState<SectionKey | null>(null);
@@ -119,6 +126,17 @@ export default function AjustesPage() {
     // Inv order
     const savedInv = localStorage.getItem(INV_ORDER_KEY);
     if (savedInv) { try { setInvOrder(JSON.parse(savedInv)); } catch {} }
+
+    // Período de renovación
+    createClient().from("subscriptions")
+      .select("current_period_end")
+      .single()
+      .then(({ data }) => {
+        if (data?.current_period_end) {
+          const d = new Date(data.current_period_end);
+          setPeriodEnd(d.toLocaleDateString("es-ES"));
+        }
+      });
   }, []);
 
   // ── CUENTA handlers ──────────────────────────────────────────────────────
@@ -139,6 +157,16 @@ export default function AjustesPage() {
     if (error) { toast(error.message, "error"); return; }
     toast("Contraseña actualizada");
     setNewPw(""); setConfirmPw(""); setShowPwForm(false);
+  }
+
+  // ── SUSCRIPCIÓN handlers ─────────────────────────────────────────────────
+  async function handleManageSubscription() {
+    setLoadingPortal(true);
+    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const { url } = await res.json();
+    if (url) window.location.href = url;
+    else toast("Error abriendo el portal", "error");
+    setLoadingPortal(false);
   }
 
   // ── FINANZAS — section order + fields ────────────────────────────────────
@@ -313,6 +341,118 @@ export default function AjustesPage() {
                 <LogoutIcon /> Cerrar sesión
               </button>
             </div>
+          </SettingsCard>
+
+          {/* ── SUSCRIPCIÓN ─────────────────────────────────────────────── */}
+          <SettingsCard label="SUSCRIPCIÓN" dot="bg-brand-green">
+            {planInfo.loading ? (
+              <div className="px-4 py-4">
+                <div className="h-4 w-32 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
+              </div>
+            ) : planInfo.isTrial && !planInfo.trialExpired ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Prueba gratuita</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Quedan {planInfo.trialDaysLeft} días de prueba</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
+                    Ver planes
+                  </Link>
+                </div>
+              </>
+            ) : planInfo.trialExpired ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Prueba finalizada</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Tu prueba ha terminado</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-brand-red">EXPIRADO</span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
+                    Ver planes
+                  </Link>
+                </div>
+              </>
+            ) : planInfo.status === "past_due" || planInfo.status === "canceled" ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 capitalize">Plan actual: {planInfo.plan}</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Activa tu pago para continuar</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/50 text-brand-red">
+                    {planInfo.status === "past_due" ? "PAGO PENDIENTE" : "CANCELADO"}
+                  </span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={loadingPortal}
+                    className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-60"
+                  >
+                    {loadingPortal ? "Abriendo..." : "Gestionar suscripción"}
+                  </button>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                  <Link href="/pricing" className="bg-brand-green text-white rounded-lg px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">
+                    Ver planes
+                  </Link>
+                </div>
+              </>
+            ) : planInfo.effectivePlan === "basic" && planInfo.status === "active" ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Basic</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                      3,49 €/mes · Renovación: {periodEnd ?? "—"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={loadingPortal}
+                    className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-60"
+                  >
+                    {loadingPortal ? "Abriendo…" : "Gestionar suscripción"}
+                  </button>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                  <Link href="/pricing" className="text-xs text-brand-green hover:underline">
+                    Cambiar a Pro →
+                  </Link>
+                </div>
+              </>
+            ) : planInfo.effectivePlan === "pro" && planInfo.status === "active" ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Pro</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                      5,99 €/mes · Renovación: {periodEnd ?? "—"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                </div>
+                <div className="px-4 py-3 flex items-center justify-between last:border-0">
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={loadingPortal}
+                    className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors disabled:opacity-60"
+                  >
+                    {loadingPortal ? "Abriendo…" : "Gestionar suscripción"}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </SettingsCard>
 
           {/* ── APARIENCIA ──────────────────────────────────────────────── */}

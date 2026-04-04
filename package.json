@@ -1,5 +1,5 @@
 {
-  "name": "finance-app",
+  "name": "spenfly",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,12 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.35",
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "jspdf": "^4.2.1",
+    "next": "^16.2.2",
     "react": "^18",
     "react-dom": "^18",
-    "@supabase/supabase-js": "^2.45.4",
-    "@supabase/ssr": "^0.5.1",
-    "jspdf": "^2.5.1"
+    "stripe": "^22.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -22,7 +23,7 @@
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35",
+    "eslint-config-next": "^16.2.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

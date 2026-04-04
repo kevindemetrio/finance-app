@@ -12,7 +12,14 @@ export const metadata: Metadata = {
   title: "Spenfly",
   description: "Spenfly — Tu gestor de finanzas personales",
   manifest: "/manifest.json",
-  icons: { icon: [{ url: "/favicon.png", type: "image/png" }], apple: "/icon-192.png" },
+  icons: { 
+  icon: [
+    { url: "/favicon.ico", type: "image/x-icon" },
+    { url: "/favicon.svg", type: "image/svg+xml" },
+    { url: "/favicon.png", type: "image/png" },
+  ], 
+  apple: "/icon-192.png" 
+},
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Spenfly" },
   other: { "mobile-web-app-capable": "yes" },
 };
