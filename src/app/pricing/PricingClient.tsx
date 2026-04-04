@@ -57,14 +57,14 @@ export default function PricingClient({ prices }: Props) {
   }
 
   const currentPlan = planInfo.plan;
+  const planLoading = planInfo.loading;
 
   const basicPriceId = annual ? prices.basicAnnual : prices.basicMonthly;
   const proPriceId = annual ? prices.proAnnual : prices.proMonthly;
-  const familyPriceId = annual ? prices.familyAnnual : prices.familyMonthly;
 
-  const isCurrentBasic = currentPlan === "basic";
-  const isCurrentPro = currentPlan === "pro";
-  const isCurrentFamily = currentPlan === "family";
+  const isCurrentBasic = !planLoading && currentPlan === "basic";
+  const isCurrentPro = !planLoading && currentPlan === "pro";
+  const isCurrentFamily = !planLoading && currentPlan === "family";
 
   return (
     <SeasonWrapper>
@@ -113,7 +113,7 @@ export default function PricingClient({ prices }: Props) {
           )}
         </div>
 
-        {/* Cards */}
+        {/* Cards — siempre se muestran los 3 planes */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* ── Basic ── */}
@@ -153,7 +153,7 @@ export default function PricingClient({ prices }: Props) {
             </ul>
 
             <button
-              disabled={isCurrentBasic || loadingPlan !== null}
+              disabled={isCurrentBasic || planLoading || loadingPlan !== null}
               onClick={() => handleCheckout(basicPriceId)}
               className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors
                 ${isCurrentBasic
@@ -210,7 +210,7 @@ export default function PricingClient({ prices }: Props) {
             </ul>
 
             <button
-              disabled={isCurrentPro || loadingPlan !== null}
+              disabled={isCurrentPro || planLoading || loadingPlan !== null}
               onClick={() => handleCheckout(proPriceId)}
               className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors
                 ${isCurrentPro

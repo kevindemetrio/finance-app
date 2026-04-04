@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
-import { useTheme, SEASON_CONFIG } from "../../components/ThemeProvider";
+import { useTheme } from "../../components/ThemeProvider";
 import Link from "next/link";
 
 const COINS = [
@@ -57,51 +57,57 @@ function CoinRain() {
 }
 
 function ThemeToggleAuth() {
-  const { theme, season, toggle } = useTheme();
+  const { theme, toggle } = useTheme();
+  // Treat season as dark for display purposes on auth pages
+  const isDark = theme === "dark" || theme === "season";
 
-  const icons = {
-    light:  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-    dark:   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-    season: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a9 9 0 0 1 9 9c0 4.97-9 13-9 13S3 15.97 3 11a9 9 0 0 1 9-9z"/></svg>,
-  };
+  function handleToggle() {
+    // toggle cycles: light → dark → season → light
+    // Skip season: dark needs two toggles (dark→season→light)
+    toggle();
+    if (theme === "dark") toggle();
+  }
 
-  const labels = { light: "Claro", dark: "Oscuro", season: SEASON_CONFIG[season].label };
+  const btnStyle = isDark
+    ? { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }
+    : { background: "rgba(0,0,0,0.06)", color: "rgba(0,0,0,0.45)", border: "1px solid rgba(0,0,0,0.1)" };
+
+  const SunIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>;
+  const MoonIcon = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
 
   return (
-    <button onClick={toggle}
+    <button
+      onClick={handleToggle}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-      style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
-      title={`Cambiar tema · ahora: ${labels[theme]}`}
+      style={btnStyle}
+      title={`Cambiar tema · ahora: ${isDark ? "Oscuro" : "Claro"}`}
     >
-      {icons[theme]}
-      <span>{labels[theme]}</span>
+      {isDark ? <SunIcon /> : <MoonIcon />}
+      <span>{isDark ? "Claro" : "Oscuro"}</span>
     </button>
   );
 }
 
 export default function SignupPage() {
-  const { theme, season } = useTheme();
-  const isSeason = theme === "season";
-  const cfg = isSeason ? SEASON_CONFIG[season] : null;
+  const { theme } = useTheme();
 
-  const [email, setEmail]           = useState("");
-  const [password, setPassword]     = useState("");
-  const [confirm, setConfirm]       = useState("");
-  const [error, setError]           = useState("");
-  const [loading, setLoading]       = useState(false);
-  const [done, setDone]             = useState(false);
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm]   = useState("");
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [done, setDone]         = useState(false);
 
-  const accentColor = cfg ? cfg.accentColor : "#BA7517";
-  const pageBg      = cfg ? cfg.bg : theme === "light" ? "#f5f5f5" : "#0d0a00";
-  const cardBg      = cfg ? cfg.cardBg : theme === "light" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.06)";
-  const cardBorder  = cfg ? cfg.cardBorder : theme === "light" ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.1)";
-  const textPrimary = cfg ? cfg.titleColor : theme === "light" ? "#111" : "#fff";
-  const textMuted   = cfg ? cfg.accentColor + "99" : theme === "light" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.35)";
-  const inputBg     = cfg ? "rgba(255,255,255,0.18)" : theme === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.07)";
-  const inputBorder = cfg ? cfg.cardBorder : theme === "light" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)";
+  const accentColor = "#1D9E75";
+  const pageBg      = theme === "light" ? "#f5f5f5" : "#0a0a0a";
+  const cardBg      = theme === "light" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.07)";
+  const cardBorder  = theme === "light" ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)";
+  const textPrimary = theme === "light" ? "#111" : "#fff";
+  const textMuted   = theme === "light" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.35)";
+  const inputBg     = theme === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.08)";
+  const inputBorder = theme === "light" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)";
 
-  // Password match indicator
-  const passwordsMatch = confirm.length > 0 && password === confirm;
+  const passwordsMatch    = confirm.length > 0 && password === confirm;
   const passwordsMismatch = confirm.length > 0 && password !== confirm;
 
   async function handleSignup() {
@@ -119,7 +125,7 @@ export default function SignupPage() {
     return (
       <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden transition-colors duration-500"
         style={{ background: pageBg }}>
-        {(theme === "dark" || (isSeason && (season === "autumn" || season === "winter"))) && <CoinRain />}
+        {theme === "dark" && <CoinRain />}
         <div className="relative z-10 w-full max-w-sm text-center">
           <div className="rounded-2xl p-8 border" style={{ background: cardBg, borderColor: cardBorder, backdropFilter: "blur(12px)" }}>
             <div className="text-5xl mb-4">✉️</div>
@@ -140,7 +146,7 @@ export default function SignupPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden transition-colors duration-500"
       style={{ background: pageBg }}>
-      {(theme === "dark" || (isSeason && (season === "autumn" || season === "winter"))) && <CoinRain />}
+      {theme === "dark" && <CoinRain />}
 
       {/* Theme toggle */}
       <div className="absolute top-4 right-4 z-20">
@@ -152,13 +158,12 @@ export default function SignupPage() {
 
           {/* Logo */}
           <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: accentColor }}>
-              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 21 L22 10 L18 23 Z" fill="white"/>
-                <path d="M22 10 L18 23 L19.5 16.5 Z" fill="rgba(0,0,0,0.18)"/>
-                <path d="M8 21 L19.5 16.5 L22 10 Z" fill="rgba(255,255,255,0.45)"/>
-                <line x1="22.5" y1="9.5" x2="25.5" y2="6.5" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2" strokeDasharray="1.5,1.5" strokeLinecap="round"/>
-                <circle cx="26.2" cy="5.8" r="1.2" fill="rgba(255,255,255,0.45)"/>
+            <div className="flex justify-center mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 512 512" fill="none">
+                <rect width="512" height="512" rx="88" fill="#1D9E75"/>
+                <polygon points="96,340 416,190 326,406" fill="white"/>
+                <polygon points="96,340 326,406 308,272" fill="black" opacity="0.20"/>
+                <polygon points="96,340 416,190 308,272" fill="white" opacity="0.40"/>
               </svg>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -196,7 +201,7 @@ export default function SignupPage() {
             <div>
               <label className="block text-xs uppercase tracking-widest mb-1.5 flex items-center justify-between" style={{ color: textMuted }}>
                 <span>Repite la contraseña</span>
-                {passwordsMatch && <span className="text-green-400 normal-case tracking-normal">✓ Coinciden</span>}
+                {passwordsMatch    && <span className="text-green-400 normal-case tracking-normal">✓ Coinciden</span>}
                 {passwordsMismatch && <span className="text-red-400 normal-case tracking-normal">✗ No coinciden</span>}
               </label>
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
