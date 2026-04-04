@@ -40,6 +40,14 @@ export interface Goal {
   createdAt: string;
 }
 
+export interface AnnualMonthData {
+  month: number;
+  income: number;
+  fixed: number;
+  variable: number;
+  balance: number;
+}
+
 export interface RecurringTemplate {
   id: string;
   name: string;
@@ -169,6 +177,52 @@ export async function getCarryover(year: number, month: number, depth = 0): Prom
   prev.carryover = await getCarryover(py, pm, depth + 1);
   const b = calcBalance(prev);
   return b > 0 ? b : 0;
+}
+
+// ─── Annual & category data ───────────────────────────────────────────────────
+
+export async function loadAnnualData(year: number): Promise<AnnualMonthData[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("entries")
+    .select("month, type, amount")
+    .eq("year", year);
+
+  const months: AnnualMonthData[] = Array.from({ length: 12 }, (_, i) => ({
+    month: i, income: 0, fixed: 0, variable: 0, balance: 0,
+  }));
+
+  for (const row of (data || [])) {
+    const m = months[row.month as number];
+    if (!m) continue;
+    const amount = Number(row.amount);
+    if (row.type === "income")   m.income   += amount;
+    if (row.type === "fixed")    m.fixed    += amount;
+    if (row.type === "variable") m.variable += amount;
+  }
+
+  for (const m of months) {
+    m.balance = m.income - m.fixed - m.variable;
+  }
+
+  return months;
+}
+
+export async function loadCategoryData(year: number, month: number): Promise<Record<string, number>> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("entries")
+    .select("category, amount")
+    .eq("year", year)
+    .eq("month", month)
+    .eq("type", "variable");
+
+  const result: Record<string, number> = {};
+  for (const row of (data || [])) {
+    const cat = (row.category as string | null) ?? "Sin categoría";
+    result[cat] = (result[cat] ?? 0) + Number(row.amount);
+  }
+  return result;
 }
 
 // ─── Goals ────────────────────────────────────────────────────────────────────
