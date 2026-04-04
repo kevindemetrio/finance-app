@@ -26,11 +26,29 @@ const CAT_COLORS: Record<string, string> = {
 };
 const DEFAULT_CAT_COLOR = "#5F5E5A";
 
+const CAT_BG_COLORS: Record<string, string> = {
+  "Alimentación": "#E1F5EE",
+  "Ocio":         "#FCEBEB",
+  "Tecnología":   "#EAF3DE",
+  "Transporte":   "#E6F1FB",
+  "Hogar":        "#E6F1FB",
+  "Salud":        "#E1F5EE",
+  "Ropa":         "#FBEAF0",
+  "Regalos":      "#FBEAF0",
+  "Educación":    "#EAF3DE",
+  "Viajes":       "#FAEEDA",
+  "Otro":         "#F1EFE8",
+};
+const DEFAULT_CAT_BG = "#F1EFE8";
+
 function Bar({ pct, over, warn }: { pct: number; over: boolean; warn: boolean }) {
-  const color = over ? "bg-brand-red" : warn ? "bg-brand-amber" : "bg-brand-green";
+  const lightColor = over ? "#E24B4A" : warn ? "#F0B95A" : "#6CC8A8";
   return (
     <div className="h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className="h-full rounded-full transition-all dark:hidden"
+           style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: lightColor }} />
+      <div className={`h-full rounded-full transition-all hidden dark:block ${over ? "bg-brand-red" : warn ? "bg-brand-amber" : "bg-brand-green"}`}
+           style={{ width: `${Math.min(pct, 100)}%` }} />
     </div>
   );
 }
@@ -46,6 +64,7 @@ export function CategoryBudgetPanel({
   const { categories } = useCategories();
   const { theme, season } = useTheme();
   const cfg = theme === "season" ? SEASON_CONFIG[season] : null;
+  const isLight = theme === "light";
 
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
@@ -203,13 +222,19 @@ export function CategoryBudgetPanel({
                 const over   = budget > 0 && spent > budget;
                 const warn   = budget > 0 && pct >= 80 && !over;
                 const accent = CAT_COLORS[cat] || DEFAULT_CAT_COLOR;
+                const bgColor = CAT_BG_COLORS[cat] || DEFAULT_CAT_BG;
                 const isEd   = editingCat === cat;
 
                 return (
                   <div key={cat} className="px-4 py-2.5">
                     {isEd ? (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-medium flex-1" style={{ color: accent }}>{cat}</span>
+                        <span
+                          className="text-xs font-medium flex-1 px-2 py-0.5 rounded-md"
+                          style={isLight ? { color: accent, background: bgColor } : { color: accent }}
+                        >
+                          {cat}
+                        </span>
                         <TextInput
                           type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                           placeholder="Límite €" className="w-28" autoFocus min="0" step="1"
@@ -221,7 +246,12 @@ export function CategoryBudgetPanel({
                     ) : (
                       <>
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium flex-1" style={{ color: accent }}>{cat}</span>
+                          <span
+                            className="text-xs font-medium flex-1 px-2 py-0.5 rounded-md"
+                            style={isLight ? { color: accent, background: bgColor } : { color: accent }}
+                          >
+                            {cat}
+                          </span>
                           <span className="text-xs text-neutral-500 dark:text-neutral-400">
                             {fmtEur(spent)}
                             {budget > 0 && <span className="text-neutral-400 dark:text-neutral-600"> / {fmtEur(budget)}</span>}

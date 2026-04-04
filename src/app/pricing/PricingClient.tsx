@@ -40,6 +40,18 @@ export default function PricingClient({ prices }: Props) {
     }
   }, [searchParams, router]);
 
+  async function handlePortal() {
+    setLoadingPlan("portal");
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch {
+      toast("Error al abrir el portal. Inténtalo de nuevo.", "error");
+    }
+    setLoadingPlan(null);
+  }
+
   async function handleCheckout(priceId: string) {
     setLoadingPlan(priceId);
     try {
@@ -152,20 +164,23 @@ export default function PricingClient({ prices }: Props) {
               <FeatureRow label="Búsqueda cross-mes" />
             </ul>
 
-            <button
-              disabled={isCurrentBasic || planLoading || loadingPlan !== null}
-              onClick={() => handleCheckout(basicPriceId)}
-              className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors
-                ${isCurrentBasic
-                  ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
-                  : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-60"}`}
-            >
-              {loadingPlan === basicPriceId
-                ? "Redirigiendo…"
-                : isCurrentBasic
-                  ? "Plan actual"
-                  : "Empezar con Basic"}
-            </button>
+            {isCurrentBasic ? (
+              <button
+                onClick={handlePortal}
+                disabled={loadingPlan !== null}
+                className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-brand-blue text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {loadingPlan === "portal" ? "Abriendo…" : "Gestionar suscripción →"}
+              </button>
+            ) : (
+              <button
+                disabled={planLoading || loadingPlan !== null}
+                onClick={() => handleCheckout(basicPriceId)}
+                className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-60"
+              >
+                {loadingPlan === basicPriceId ? "Redirigiendo…" : "Empezar con Basic"}
+              </button>
+            )}
           </div>
 
           {/* ── Pro ── */}
@@ -209,20 +224,23 @@ export default function PricingClient({ prices }: Props) {
               <FeatureRow included label="Historial completo" />
             </ul>
 
-            <button
-              disabled={isCurrentPro || planLoading || loadingPlan !== null}
-              onClick={() => handleCheckout(proPriceId)}
-              className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors
-                ${isCurrentPro
-                  ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
-                  : "bg-brand-green text-white hover:opacity-90 disabled:opacity-60"}`}
-            >
-              {loadingPlan === proPriceId
-                ? "Redirigiendo…"
-                : isCurrentPro
-                  ? "Plan actual"
-                  : "Empezar con Pro"}
-            </button>
+            {isCurrentPro ? (
+              <button
+                onClick={handlePortal}
+                disabled={loadingPlan !== null}
+                className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-brand-blue text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {loadingPlan === "portal" ? "Abriendo…" : "Gestionar suscripción →"}
+              </button>
+            ) : (
+              <button
+                disabled={planLoading || loadingPlan !== null}
+                onClick={() => handleCheckout(proPriceId)}
+                className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-brand-green text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {loadingPlan === proPriceId ? "Redirigiendo…" : "Empezar con Pro"}
+              </button>
+            )}
           </div>
 
           {/* ── Family ── */}

@@ -34,6 +34,20 @@ const ACCENT_STYLE: Record<InvestmentCategory, string> = {
   stock:     "border-l-brand-red",
 };
 
+const CAT_PASTEL_BG: Record<InvestmentCategory, string> = {
+  emergency: "#E6F1FB",
+  variable:  "#E1F5EE",
+  fixed:     "#FAEEDA",
+  stock:     "#FCEBEB",
+};
+
+const CAT_LABEL_COLOR: Record<InvestmentCategory, string> = {
+  emergency: "#185FA5",
+  variable:  "#0F6E56",
+  fixed:     "#854F0B",
+  stock:     "#A32D2D",
+};
+
 export default function InversionesPage() {
   const router = useRouter();
   const { canUseInvestments, loading: planLoading } = usePlan();
@@ -195,8 +209,15 @@ export default function InversionesPage() {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
             return (
-              <div key={cat} className={`metric-card border-l-[3px] ${ACCENT_STYLE[cat]}`}>
-                <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-bold truncate">
+              <div
+                key={cat}
+                className={`rounded-xl p-4 border-l-[3px] ${ACCENT_STYLE[cat]} dark:bg-neutral-800/60`}
+                style={{ backgroundColor: CAT_PASTEL_BG[cat] }}
+              >
+                <p
+                  className="text-[10px] uppercase tracking-widest mb-1.5 font-bold truncate dark:text-neutral-500"
+                  style={{ color: CAT_LABEL_COLOR[cat] }}
+                >
                   {CATEGORY_LABELS[cat]}
                 </p>
                 <p className={`text-base font-bold ${colors.text}`}>{fmtEur(total)}</p>

@@ -152,7 +152,8 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
 
       {/* ── Progress — siempre visible ──────────────────────────────────── */}
       <div className="px-4 pb-3">
-        <div className="h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden mb-1.5">
+        <div className="h-2 rounded-full overflow-hidden mb-1.5"
+             style={{ backgroundColor: `${color}20` }}>
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{ width: `${pct}%`, background: color }}

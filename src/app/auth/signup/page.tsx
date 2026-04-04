@@ -58,12 +58,9 @@ function CoinRain() {
 
 function ThemeToggleAuth() {
   const { theme, toggle } = useTheme();
-  // Treat season as dark for display purposes on auth pages
   const isDark = theme === "dark" || theme === "season";
 
   function handleToggle() {
-    // toggle cycles: light → dark → season → light
-    // Skip season: dark needs two toggles (dark→season→light)
     toggle();
     if (theme === "dark") toggle();
   }
@@ -99,13 +96,13 @@ export default function SignupPage() {
   const [done, setDone]         = useState(false);
 
   const accentColor = "#1D9E75";
-  const pageBg      = theme === "light" ? "#f5f5f5" : "#0a0a0a";
-  const cardBg      = theme === "light" ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.07)";
-  const cardBorder  = theme === "light" ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)";
-  const textPrimary = theme === "light" ? "#111" : "#fff";
-  const textMuted   = theme === "light" ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.35)";
-  const inputBg     = theme === "light" ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.08)";
-  const inputBorder = theme === "light" ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)";
+  const pageBg      = theme === "light" ? "#FDFBF7" : "#0a0a0a";
+  const cardBg      = theme === "light" ? "#FFFFFF" : "rgba(255,255,255,0.07)";
+  const cardBorder  = theme === "light" ? "#E8E2D8" : "rgba(255,255,255,0.12)";
+  const textPrimary = theme === "light" ? "#2D2A26" : "#fff";
+  const textMuted   = theme === "light" ? "#6B6560" : "rgba(255,255,255,0.35)";
+  const inputBg     = theme === "light" ? "#F5F0E8" : "rgba(255,255,255,0.08)";
+  const inputBorder = theme === "light" ? "#E8E2D8" : "rgba(255,255,255,0.12)";
 
   const passwordsMatch    = confirm.length > 0 && password === confirm;
   const passwordsMismatch = confirm.length > 0 && password !== confirm;
