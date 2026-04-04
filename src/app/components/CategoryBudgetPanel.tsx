@@ -18,28 +18,19 @@ interface Props {
   onVarBudgetChange: (v: number) => void;
 }
 
-const CAT_COLORS: Record<string, string> = {
-  "Alimentación": "#0F6E56", "Ocio": "#A32D2D", "Tecnología": "#3B6D11",
-  "Transporte": "#185FA5", "Hogar": "#185FA5",  "Salud": "#0F6E56",
-  "Ropa": "#993556",        "Regalos": "#993556", "Educación": "#3B6D11",
-  "Viajes": "#854F0B",      "Otro": "#5F5E5A",
+const CAT_COLORS: Record<string, { dot: string; text: string }> = {
+  "Alimentación": { dot: "#6CC8A8", text: "#1D9E75" },
+  "Ocio":         { dot: "#E09190", text: "#C05B5A" },
+  "Tecnología":   { dot: "#8FBA6A", text: "#5A8A35" },
+  "Transporte":   { dot: "#7AAEE0", text: "#4A80C4" },
+  "Hogar":        { dot: "#7AAEE0", text: "#4A80C4" },
+  "Salud":        { dot: "#6CC8A8", text: "#1D9E75" },
+  "Ropa":         { dot: "#D98FAA", text: "#B05878" },
+  "Regalos":      { dot: "#D98FAA", text: "#B05878" },
+  "Educación":    { dot: "#8FBA6A", text: "#5A8A35" },
+  "Viajes":       { dot: "#E0B472", text: "#C4862A" },
+  "Otro":         { dot: "#A8A49E", text: "#7A7770" },
 };
-const DEFAULT_CAT_COLOR = "#5F5E5A";
-
-const CAT_BG_COLORS: Record<string, string> = {
-  "Alimentación": "#E1F5EE",
-  "Ocio":         "#FCEBEB",
-  "Tecnología":   "#EAF3DE",
-  "Transporte":   "#E6F1FB",
-  "Hogar":        "#E6F1FB",
-  "Salud":        "#E1F5EE",
-  "Ropa":         "#FBEAF0",
-  "Regalos":      "#FBEAF0",
-  "Educación":    "#EAF3DE",
-  "Viajes":       "#FAEEDA",
-  "Otro":         "#F1EFE8",
-};
-const DEFAULT_CAT_BG = "#F1EFE8";
 
 function Bar({ pct, over, warn }: { pct: number; over: boolean; warn: boolean }) {
   const lightColor = over ? "#E24B4A" : warn ? "#F0B95A" : "#6CC8A8";
@@ -64,7 +55,6 @@ export function CategoryBudgetPanel({
   const { categories } = useCategories();
   const { theme, season } = useTheme();
   const cfg = theme === "season" ? SEASON_CONFIG[season] : null;
-  const isLight = theme === "light";
 
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
@@ -221,8 +211,7 @@ export function CategoryBudgetPanel({
                 const pct    = budget > 0 ? Math.round((spent / budget) * 100) : 0;
                 const over   = budget > 0 && spent > budget;
                 const warn   = budget > 0 && pct >= 80 && !over;
-                const accent = CAT_COLORS[cat] || DEFAULT_CAT_COLOR;
-                const bgColor = CAT_BG_COLORS[cat] || DEFAULT_CAT_BG;
+                const catColor = CAT_COLORS[cat] || { dot: "#A8A49E", text: "#7A7770" };
                 const isEd   = editingCat === cat;
 
                 return (
@@ -230,8 +219,12 @@ export function CategoryBudgetPanel({
                     {isEd ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className="text-xs font-medium flex-1 px-2 py-0.5 rounded-md"
-                          style={isLight ? { color: accent, background: bgColor } : { color: accent }}
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: catColor.dot }}
+                        />
+                        <span
+                          className="text-xs font-medium flex-1"
+                          style={{ color: catColor.text }}
                         >
                           {cat}
                         </span>
@@ -247,8 +240,12 @@ export function CategoryBudgetPanel({
                       <>
                         <div className="flex items-center gap-2 mb-1">
                           <span
-                            className="text-xs font-medium flex-1 px-2 py-0.5 rounded-md"
-                            style={isLight ? { color: accent, background: bgColor } : { color: accent }}
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: catColor.dot }}
+                          />
+                          <span
+                            className="text-xs font-medium flex-1"
+                            style={{ color: catColor.text }}
                           >
                             {cat}
                           </span>

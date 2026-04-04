@@ -21,22 +21,22 @@ interface Props {
   onDelete: () => void;
 }
 
-const CAT_COLORS: Record<string, { bg: string; text: string }> = {
-  "Alimentación": { bg: "#E1F5EE", text: "#0F6E56" },
-  "Ocio":         { bg: "#FCEBEB", text: "#A32D2D" },
-  "Tecnología":   { bg: "#EAF3DE", text: "#3B6D11" },
-  "Transporte":   { bg: "#E6F1FB", text: "#185FA5" },
-  "Hogar":        { bg: "#E6F1FB", text: "#185FA5" },
-  "Salud":        { bg: "#E1F5EE", text: "#0F6E56" },
-  "Ropa":         { bg: "#FBEAF0", text: "#993556" },
-  "Regalos":      { bg: "#FBEAF0", text: "#993556" },
-  "Educación":    { bg: "#EAF3DE", text: "#3B6D11" },
-  "Viajes":       { bg: "#FAEEDA", text: "#854F0B" },
-  "Otro":         { bg: "#F1EFE8", text: "#5F5E5A" },
+const CAT_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  "Alimentación": { bg: "#E1F5EE", text: "#1D9E75", dot: "#6CC8A8" },
+  "Ocio":         { bg: "#FCEBEB", text: "#C05B5A", dot: "#E09190" },
+  "Tecnología":   { bg: "#EAF3DE", text: "#5A8A35", dot: "#8FBA6A" },
+  "Transporte":   { bg: "#E6F1FB", text: "#4A80C4", dot: "#7AAEE0" },
+  "Hogar":        { bg: "#E6F1FB", text: "#4A80C4", dot: "#7AAEE0" },
+  "Salud":        { bg: "#E1F5EE", text: "#1D9E75", dot: "#6CC8A8" },
+  "Ropa":         { bg: "#FBEAF0", text: "#B05878", dot: "#D98FAA" },
+  "Regalos":      { bg: "#FBEAF0", text: "#B05878", dot: "#D98FAA" },
+  "Educación":    { bg: "#EAF3DE", text: "#5A8A35", dot: "#8FBA6A" },
+  "Viajes":       { bg: "#FAEEDA", text: "#C4862A", dot: "#E0B472" },
+  "Otro":         { bg: "#F1EFE8", text: "#7A7770", dot: "#A8A49E" },
 };
 
 export function CategoryBadge({ cat }: { cat: string }) {
-  const c = CAT_COLORS[cat] || { bg: "#F1EFE8", text: "#5F5E5A" };
+  const c = CAT_COLORS[cat] || { bg: "#F1EFE8", text: "#7A7770", dot: "#A8A49E" };
   return (
     <span style={{ background: c.bg, color: c.text }}
       className="text-[10px] px-2 py-0.5 rounded-full font-semibold whitespace-nowrap shrink-0">
