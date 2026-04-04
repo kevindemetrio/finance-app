@@ -16,9 +16,9 @@ export async function POST(_request: NextRequest) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const customerId = subscription?.provider_customer_id;
+  const providerCustomerId = subscription?.provider_customer_id;
 
-  if (!customerId) {
+  if (!providerCustomerId) {
     return NextResponse.json(
       { error: "No tienes una suscripción activa" },
       { status: 400 }
@@ -26,8 +26,8 @@ export async function POST(_request: NextRequest) {
   }
 
   const portalSession = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: process.env.NEXT_PUBLIC_APP_URL!,
+    customer: providerCustomerId,
+    return_url: process.env.NEXT_PUBLIC_APP_URL + "/ajustes",
   });
 
   return NextResponse.json({ url: portalSession.url });

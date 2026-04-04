@@ -1,9 +1,14 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "./app/lib/supabase/middleware";
 
+// Rutas de API que gestionan su propia autenticación o no requieren auth
+const EXCLUDED_PATHS = [
+  "/api/stripe/webhook",
+  "/api/stripe/portal",
+];
+
 export async function middleware(request: NextRequest) {
-  // Excluir webhook de Stripe — no requiere autenticación
-  if (request.nextUrl.pathname === "/api/stripe/webhook") {
+  if (EXCLUDED_PATHS.includes(request.nextUrl.pathname)) {
     return;
   }
   return await updateSession(request);
