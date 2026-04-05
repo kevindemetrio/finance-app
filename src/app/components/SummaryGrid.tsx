@@ -65,22 +65,28 @@ const colorMap = {
   orange: "text-brand-orange",
 };
 
-const accentMap = {
-  green:  "border-l-brand-green",
-  red:    "border-l-brand-red",
-  amber:  "border-l-brand-amber",
-  blue:   "border-l-brand-blue",
-  orange: "border-l-[#D85A30]",
+const borderColors = {
+  green:  "#1D9E75",
+  red:    "#E24B4A",
+  amber:  "#BA7517",
+  blue:   "#378ADD",
+  orange: "#D85A30",
 };
 
 function MetricCard({ label, value, color, children }: {
   label: string; value: string; color: keyof typeof colorMap; children?: React.ReactNode;
 }) {
   return (
-    <div className={`metric-card border-l-[3px] ${accentMap[color]}`}>
-      <p className="text-[10px] uppercase tracking-widest text-neutral-400 dark:text-neutral-500 mb-1.5 font-semibold truncate">{label}</p>
-      <p className={`text-base font-bold leading-tight ${colorMap[color]}`}>{value}</p>
-      {children}
+    <div className="metric-card relative overflow-hidden">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
+        style={{ backgroundColor: borderColors[color] }}
+      />
+      <div className="pl-1">
+        <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1 truncate">{label}</p>
+        <p className={`text-sm sm:text-base font-medium leading-tight ${colorMap[color]}`}>{value}</p>
+        {children}
+      </div>
     </div>
   );
 }

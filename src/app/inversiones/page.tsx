@@ -187,18 +187,25 @@ export default function InversionesPage() {
           {catOrder.map((cat) => {
             const total = grouped[cat].reduce((a, inv) => a + totalContributions(inv), 0);
             const colors = CATEGORY_COLORS[cat];
+            const borderColor = cat === "emergency" ? "#378ADD" : cat === "variable" ? "#1D9E75" : cat === "fixed" ? "#BA7517" : "#E24B4A";
             return (
-              <div key={cat} className="metric-card">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                  <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-                    {CATEGORY_LABELS[cat]}
+              <div key={cat} className="metric-card relative overflow-hidden">
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
+                  style={{ backgroundColor: borderColor }}
+                />
+                <div className="pl-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
+                    <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                      {CATEGORY_LABELS[cat]}
+                    </p>
+                  </div>
+                  <p className={`text-base font-medium ${colors.text}`}>{fmtEur(total)}</p>
+                  <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                    {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
                   </p>
                 </div>
-                <p className={`text-base font-medium ${colors.text}`}>{fmtEur(total)}</p>
-                <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                  {grouped[cat].length} posición{grouped[cat].length !== 1 ? "es" : ""}
-                </p>
               </div>
             );
           })}

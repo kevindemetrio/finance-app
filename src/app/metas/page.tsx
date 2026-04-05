@@ -152,18 +152,22 @@ export default function MetasPage() {
 
         {goals.length > 0 && (
           <div className="grid grid-cols-3 gap-2.5 mb-5">
-            <div className="metric-card">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Activas</p>
-              <p className="text-base font-medium">{goals.filter(g => g.savedAmount < g.targetAmount).length}</p>
-            </div>
-            <div className="metric-card">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Completadas</p>
-              <p className="text-base font-medium text-brand-green">{goals.filter(g => g.savedAmount >= g.targetAmount).length}</p>
-            </div>
-            <div className="metric-card">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">Total objetivo</p>
-              <p className="text-base font-medium">{fmtEur(goals.reduce((a,g)=>a+g.targetAmount,0))}</p>
-            </div>
+            {[
+              { label: "Activas",        value: goals.filter(g => g.savedAmount < g.targetAmount).length,    color: "#1D9E75", textClass: "" },
+              { label: "Completadas",    value: goals.filter(g => g.savedAmount >= g.targetAmount).length,   color: "#1D9E75", textClass: "text-brand-green" },
+              { label: "Total objetivo", value: fmtEur(goals.reduce((a, g) => a + g.targetAmount, 0)),       color: "#BA7517", textClass: "" },
+            ].map(({ label, value, color, textClass }) => (
+              <div key={label} className="metric-card relative overflow-hidden">
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl"
+                  style={{ backgroundColor: color }}
+                />
+                <div className="pl-1">
+                  <p className="text-[11px] uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-1">{label}</p>
+                  <p className={`text-base font-medium ${textClass}`}>{value}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
