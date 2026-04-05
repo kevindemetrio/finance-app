@@ -42,7 +42,16 @@ export function CategorySection({ category, investments, onChange }: Props) {
   }
 
   return (
-    <div className="card overflow-visible">
+    <div className="card overflow-visible relative">
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+        style={{
+          backgroundColor:
+            category === "emergency" ? "#378ADD" :
+            category === "variable"  ? "#1D9E75" :
+            category === "fixed"     ? "#BA7517" : "#E24B4A"
+        }}
+      />
       {/* Category header — matching Section.tsx style */}
       <button
         type="button"

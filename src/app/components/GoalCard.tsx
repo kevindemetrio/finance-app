@@ -125,7 +125,8 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
   const done = goal.savedAmount >= goal.targetAmount;
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card overflow-hidden relative">
+      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-3">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />

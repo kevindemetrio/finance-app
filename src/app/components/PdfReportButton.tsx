@@ -160,11 +160,30 @@ export function PdfReportButton({ year, month, data, totalSavings, categoryBudge
       // PORTADA
       // ════════════════════════════════════════════════════════════════════════
       setFill(doc,"#1D9E75"); doc.rect(0,0,W,44,"F");
-      // logo box (no circle API needed)
-      setFill(doc,"#ffffff"); setDraw(doc,"#ffffff"); doc.setLineWidth(0.5);
-      doc.roundedRect(mg+1,15,14,14,3,3,"S");
-      doc.setFontSize(11); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
-      doc.text("S",mg+8,25.5,{align:"center"});
+      // Logo — fondo verde redondeado
+      setFill(doc, "#1D9E75");
+      doc.roundedRect(mg, 10, 14, 14, 3, 3, "F");
+      // Avión de papel con doc.lines (compatible con todas las versiones de jsPDF)
+      const lx = mg, ly = 10, ls = 14 / 512;
+      const p1 = [[96,340],[416,190],[326,406]].map(([x,y]) => [lx + x*ls, ly + y*ls]);
+      const p2 = [[96,340],[326,406],[308,272]].map(([x,y]) => [lx + x*ls, ly + y*ls]);
+      const p3 = [[96,340],[416,190],[308,272]].map(([x,y]) => [lx + x*ls, ly + y*ls]);
+      function fillTriangle(pts: number[][], color: string, opacity = 1) {
+        setFill(doc, color);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (doc as any).setGState((doc as any).GState({ opacity }));
+        doc.lines(
+          [[pts[1][0]-pts[0][0], pts[1][1]-pts[0][1]],
+           [pts[2][0]-pts[1][0], pts[2][1]-pts[1][1]],
+           [pts[0][0]-pts[2][0], pts[0][1]-pts[2][1]]],
+          pts[0][0], pts[0][1], [1,1], "F", true
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (doc as any).setGState((doc as any).GState({ opacity: 1 }));
+      }
+      fillTriangle(p1, "#FFFFFF");
+      fillTriangle(p2, "#000000", 0.20);
+      fillTriangle(p3, "#FFFFFF", 0.40);
       doc.setFontSize(21); doc.setFont("helvetica","bold"); setTxt(doc,"#ffffff");
       doc.text("Spenfly",mg+21,18);
       doc.setFontSize(10); doc.setFont("helvetica","normal");

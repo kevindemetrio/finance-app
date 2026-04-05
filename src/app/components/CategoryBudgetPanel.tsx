@@ -51,6 +51,7 @@ export function CategoryBudgetPanel({
   const [open, setOpen]             = useState(true);
   const [editingCat, setEditingCat] = useState<Category | "global" | null>(null);
   const [editVal, setEditVal]       = useState("");
+  const [pendingCat, setPendingCat] = useState<Category | null>(null);
 
   const { categories } = useCategories();
   const { theme, season } = useTheme();
@@ -106,6 +107,7 @@ export function CategoryBudgetPanel({
     const next = budgets.filter(b => b.category !== cat);
     if (budget > 0) next.push({ category: cat, budget });
     onChange(next);
+    setPendingCat(null);
     setEditingCat(null);
   }
 
@@ -202,9 +204,12 @@ export function CategoryBudgetPanel({
           </div>
 
           {/* ── Per-category budgets ───────────────────────────────────────── */}
-          {activeCats.length > 0 && (
+          {(activeCats.length > 0 || pendingCat !== null) && (
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {activeCats.map(cat => {
+              {(pendingCat && !activeCats.includes(pendingCat)
+                ? [...activeCats, pendingCat]
+                : activeCats
+              ).map(cat => {
                 const spent  = spending[cat] || 0;
                 const budgetEntry = budgets.find(b => b.category === cat);
                 const budget = budgetEntry?.budget || 0;
@@ -234,7 +239,7 @@ export function CategoryBudgetPanel({
                           onKeyDown={e => { if (e.key === "Enter") handleSaveCat(cat); if (e.key === "Escape") setEditingCat(null); }}
                         />
                         <SaveButton onClick={() => handleSaveCat(cat)} />
-                        <GhostButton onClick={() => setEditingCat(null)}>✕</GhostButton>
+                        <GhostButton onClick={() => { setEditingCat(null); setPendingCat(null); }}>✕</GhostButton>
                       </div>
                     ) : (
                       <>
@@ -286,7 +291,7 @@ export function CategoryBudgetPanel({
           )}
 
           {/* ── Add category not yet visible ──────────────────────────────── */}
-          {categories.filter(c => !activeCats.includes(c)).length > 0 && (
+          {categories.filter(c => !activeCats.includes(c) && c !== pendingCat).length > 0 && (
             <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-800">
               <select
                 className={`input-base text-xs w-full ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
@@ -297,11 +302,14 @@ export function CategoryBudgetPanel({
                     toast("Tu prueba ha terminado. Activa un plan para continuar.", "info");
                     return;
                   }
-                  if (e.target.value) startEdit(e.target.value as Category, 0);
+                  if (e.target.value) {
+                    setPendingCat(e.target.value as Category);
+                    startEdit(e.target.value as Category, 0);
+                  }
                 }}
               >
                 <option value="">+ Añadir límite a otra categoría...</option>
-                {categories.filter(c => !activeCats.includes(c)).map(c => (
+                {categories.filter(c => !activeCats.includes(c) && c !== pendingCat).map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
