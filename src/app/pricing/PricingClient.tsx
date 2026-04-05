@@ -160,7 +160,7 @@ export default function PricingClient({ prices }: Props) {
               <FeatureRow included label="Historial 3 meses" />
               <FeatureRow label="Inversiones" />
               <FeatureRow label="Exportar PDF" />
-              <FeatureRow label="Dashboard anual" />
+              <FeatureRow label="Personalización" />
               <FeatureRow label="Búsqueda cross-mes" />
             </ul>
 
@@ -219,7 +219,7 @@ export default function PricingClient({ prices }: Props) {
               <FeatureRow included label="Metas ilimitadas" />
               <FeatureRow included label="Inversiones" />
               <FeatureRow included label="Exportar PDF" />
-              <FeatureRow included label="Dashboard anual" />
+              <FeatureRow included label="Personalización" />
               <FeatureRow included label="Búsqueda cross-mes" />
               <FeatureRow included label="Historial completo" />
             </ul>
