@@ -465,103 +465,94 @@ export default function AjustesPage() {
           {/* ── FINANZAS ────────────────────────────────────────────────── */}
           <SettingsCard label="FINANZAS" dot="bg-brand-green">
 
-            {/* Banner Pro para usuarios Basic */}
-            {planInfo.effectivePlan === "basic" && (
-              <div className="mx-4 my-2 px-3 py-2 rounded-lg bg-brand-green-light dark:bg-green-950/50
-                border border-brand-green/20 flex items-center justify-between">
-                <p className="text-xs text-brand-green-dark dark:text-green-400">
-                  🔒 Personalización disponible en Pro
-                </p>
-                <Link href="/pricing" className="text-xs font-medium text-brand-green hover:underline">
-                  Actualizar →
-                </Link>
-              </div>
-            )}
-
-            {/* Orden de secciones */}
-            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de secciones</p>
-              <div className="space-y-0.5">
-                {settings.sectionOrder.map((key, i) => (
-                  <div key={key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
-                    <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
-                    <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{SECTION_LABELS_MAP[key]}</span>
-                    <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => moveSection(key, -1)} disabled={i === 0}
-                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
-                        <ChevUpIcon />
-                      </button>
-                      <button onClick={() => moveSection(key, 1)} disabled={i === settings.sectionOrder.length - 1}
-                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
-                        <ChevDownIcon />
-                      </button>
+            {/* Orden de secciones — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de secciones</p>
+                <div className="space-y-0.5">
+                  {settings.sectionOrder.map((key, i) => (
+                    <div key={key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                      <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
+                      <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{SECTION_LABELS_MAP[key]}</span>
+                      <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => moveSection(key, -1)} disabled={i === 0}
+                          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                          <ChevUpIcon />
+                        </button>
+                        <button onClick={() => moveSection(key, 1)} disabled={i === settings.sectionOrder.length - 1}
+                          className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                          <ChevDownIcon />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </ProtectedSection>
 
-            {/* Campos visibles por sección */}
-            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Campos visibles</p>
-              <div className="space-y-0.5">
-                {settings.sectionOrder.map(key => {
-                  const available = SECTION_AVAILABLE_FIELDS[key];
-                  const fields = ALL_FIELD_LABELS.filter(f => available.includes(f.key));
-                  const onCount = fields.filter(f => settings.sectionPrefs[key][f.key]).length;
-                  const isOpen = activeFieldSection === key;
-                  return (
-                    <div key={key}>
-                      <button
-                        onClick={() => setActiveFieldSection(isOpen ? null : key)}
-                        className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-sm font-medium transition-colors
-                          ${isOpen
-                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
-                            : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-neutral-100"}`}
-                      >
-                        <span>{SECTION_LABELS_MAP[key]}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                            ${isOpen ? "bg-brand-blue text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"}`}>
-                            {onCount}/{fields.length}
-                          </span>
-                          <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
-                        </div>
-                      </button>
-                      {isOpen && (
-                        <div className="mx-2 mt-1 mb-1 rounded-xl bg-neutral-50 dark:bg-neutral-800/60
-                          border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
-                          {fields.map(({ key: field, label }, fi) => {
-                            const on = settings.sectionPrefs[key][field];
-                            return (
-                              <button
-                                key={field}
-                                onClick={() => toggleField(key, field)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors text-left
-                                  hover:bg-white dark:hover:bg-neutral-700/60
-                                  ${fi < fields.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}`}
-                              >
-                                <div className={`relative w-8 h-[18px] rounded-full transition-all shrink-0 ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}>
-                                  <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${on ? "left-[18px]" : "left-[2px]"}`} />
-                                </div>
-                                <span className={on ? "text-neutral-800 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-600"}>
-                                  {label}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* Campos visibles por sección — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Campos visibles</p>
+                <div className="space-y-0.5">
+                  {settings.sectionOrder.map(key => {
+                    const available = SECTION_AVAILABLE_FIELDS[key];
+                    const fields = ALL_FIELD_LABELS.filter(f => available.includes(f.key));
+                    const onCount = fields.filter(f => settings.sectionPrefs[key][f.key]).length;
+                    const isOpen = activeFieldSection === key;
+                    return (
+                      <div key={key}>
+                        <button
+                          onClick={() => setActiveFieldSection(isOpen ? null : key)}
+                          className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-sm font-medium transition-colors
+                            ${isOpen
+                              ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                              : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-neutral-100"}`}
+                        >
+                          <span>{SECTION_LABELS_MAP[key]}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                              ${isOpen ? "bg-brand-blue text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"}`}>
+                              {onCount}/{fields.length}
+                            </span>
+                            <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
+                              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </div>
+                        </button>
+                        {isOpen && (
+                          <div className="mx-2 mt-1 mb-1 rounded-xl bg-neutral-50 dark:bg-neutral-800/60
+                            border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
+                            {fields.map(({ key: field, label }, fi) => {
+                              const on = settings.sectionPrefs[key][field];
+                              return (
+                                <button
+                                  key={field}
+                                  onClick={() => toggleField(key, field)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors text-left
+                                    hover:bg-white dark:hover:bg-neutral-700/60
+                                    ${fi < fields.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}`}
+                                >
+                                  <div className={`relative w-8 h-[18px] rounded-full transition-all shrink-0 ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}>
+                                    <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${on ? "left-[18px]" : "left-[2px]"}`} />
+                                  </div>
+                                  <span className={on ? "text-neutral-800 dark:text-neutral-200 font-medium" : "text-neutral-400 dark:text-neutral-600"}>
+                                    {label}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            </ProtectedSection>
 
-            {/* Template manager */}
+            {/* Template manager — disponible en todos los planes */}
             <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plantilla de gastos fijos</p>
@@ -577,31 +568,33 @@ export default function AjustesPage() {
               </button>
             </div>
 
-            {/* Section colors */}
-            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Colores de secciones</p>
-              <div className="space-y-3">
-                {settings.sectionOrder.map(key => (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400 w-32 shrink-0">{SECTION_LABELS_MAP[key]}</span>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {SECTION_COLOR_PRESETS.map(c => (
-                        <button key={c} onClick={() => handleSectionColor(key, c)}
-                          className="w-5 h-5 rounded-full transition-transform hover:scale-110"
-                          style={{ background: c, outline: sectionColors[key] === c ? `2px solid ${c}` : "none", outlineOffset: 2 }}
-                        />
-                      ))}
-                      {sectionColors[key] && (
-                        <button onClick={() => handleSectionColor(key, null)}
-                          className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 hover:text-neutral-600">
-                          reset
-                        </button>
-                      )}
+            {/* Colores de secciones — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Colores de secciones</p>
+                <div className="space-y-3">
+                  {settings.sectionOrder.map(key => (
+                    <div key={key} className="flex items-center gap-3">
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400 w-32 shrink-0">{SECTION_LABELS_MAP[key]}</span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {SECTION_COLOR_PRESETS.map(c => (
+                          <button key={c} onClick={() => handleSectionColor(key, c)}
+                            className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                            style={{ background: c, outline: sectionColors[key] === c ? `2px solid ${c}` : "none", outlineOffset: 2 }}
+                          />
+                        ))}
+                        {sectionColors[key] && (
+                          <button onClick={() => handleSectionColor(key, null)}
+                            className="text-[10px] text-neutral-400 border border-neutral-200 dark:border-neutral-700 rounded px-1.5 py-0.5 hover:text-neutral-600">
+                            reset
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </ProtectedSection>
 
             {/* Categories */}
             <div>
@@ -663,44 +656,77 @@ export default function AjustesPage() {
           {/* ── METAS ───────────────────────────────────────────────────── */}
           <SettingsCard label="METAS" dot="bg-brand-red">
 
-            {/* Default goal color */}
-            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Color por defecto para nuevas metas
-              </p>
-              <div className="flex gap-2">
-                {GOAL_COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => handleDefaultGoalColor(c)}
-                    className="w-6 h-6 rounded-full transition-transform hover:scale-110"
-                    style={{
-                      background: c,
-                      outline: defaultGoalColor === c ? `2px solid ${c}` : "none",
-                      outlineOffset: 2,
-                    }}
-                  />
-                ))}
+            {/* Color por defecto — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                  Color por defecto para nuevas metas
+                </p>
+                <div className="flex gap-2">
+                  {GOAL_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => handleDefaultGoalColor(c)}
+                      className="w-6 h-6 rounded-full transition-transform hover:scale-110"
+                      style={{
+                        background: c,
+                        outline: defaultGoalColor === c ? `2px solid ${c}` : "none",
+                        outlineOffset: 2,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            </ProtectedSection>
 
-            {/* Goal ordering */}
-            <div className="px-4 py-3">
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de metas</p>
-              {sortedGoals.length === 0 ? (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 italic">Sin metas todavía</p>
-              ) : (
+            {/* Orden de metas — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de metas</p>
+                {sortedGoals.length === 0 ? (
+                  <p className="text-xs text-neutral-400 dark:text-neutral-500 italic">Sin metas todavía</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {sortedGoals.map((goal, i) => (
+                      <div key={goal.id} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: goal.color ?? "#1D9E75" }} />
+                        <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300 truncate">{goal.name}</span>
+                        <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => moveGoal(goal.id, -1)} disabled={i === 0}
+                            className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                            <ChevUpIcon />
+                          </button>
+                          <button onClick={() => moveGoal(goal.id, 1)} disabled={i === sortedGoals.length - 1}
+                            className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
+                            <ChevDownIcon />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ProtectedSection>
+          </SettingsCard>
+
+          {/* ── INVERSIONES ─────────────────────────────────────────────── */}
+          <SettingsCard label="INVERSIONES" dot="bg-[#7F77DD]">
+
+            {/* Orden de categorías — bloqueado en Basic */}
+            <ProtectedSection isLocked={planInfo.effectivePlan === "basic"}>
+              <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de categorías</p>
                 <div className="space-y-0.5">
-                  {sortedGoals.map((goal, i) => (
-                    <div key={goal.id} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: goal.color ?? "#1D9E75" }} />
-                      <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300 truncate">{goal.name}</span>
+                  {sortedInvCats.map((cat, i) => (
+                    <div key={cat.key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
+                      <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{cat.label}</span>
                       <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => moveGoal(goal.id, -1)} disabled={i === 0}
+                        <button onClick={() => moveInvCat(cat.key, -1)} disabled={i === 0}
                           className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
                           <ChevUpIcon />
                         </button>
-                        <button onClick={() => moveGoal(goal.id, 1)} disabled={i === sortedGoals.length - 1}
+                        <button onClick={() => moveInvCat(cat.key, 1)} disabled={i === sortedInvCats.length - 1}
                           className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
                           <ChevDownIcon />
                         </button>
@@ -708,35 +734,8 @@ export default function AjustesPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </SettingsCard>
-
-          {/* ── INVERSIONES ─────────────────────────────────────────────── */}
-          <SettingsCard label="INVERSIONES" dot="bg-[#7F77DD]">
-
-            {/* Category ordering */}
-            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de categorías</p>
-              <div className="space-y-0.5">
-                {sortedInvCats.map((cat, i) => (
-                  <div key={cat.key} className="group flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
-                    <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{cat.label}</span>
-                    <div className="flex gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => moveInvCat(cat.key, -1)} disabled={i === 0}
-                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
-                        <ChevUpIcon />
-                      </button>
-                      <button onClick={() => moveInvCat(cat.key, 1)} disabled={i === sortedInvCats.length - 1}
-                        className="w-6 h-6 flex items-center justify-center rounded text-neutral-500 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-20 transition-all">
-                        <ChevDownIcon />
-                      </button>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </div>
+            </ProtectedSection>
 
             {/* Category descriptions accordion */}
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -845,6 +844,26 @@ function AjGridIcon() {
 function AjTourIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
 }
+function ProtectedSection({ isLocked, children }: { isLocked: boolean; children: React.ReactNode }) {
+  if (!isLocked) return <>{children}</>;
+  return (
+    <div className="relative">
+      <div className="mx-4 mt-3 mb-1 px-3 py-2 rounded-lg bg-brand-green-light dark:bg-green-950/50
+        border border-brand-green/20 flex items-center justify-between relative z-20">
+        <p className="text-xs text-brand-green-dark dark:text-green-400">🔒 Disponible en Pro</p>
+        <Link href="/pricing" className="text-xs font-medium text-brand-green hover:underline">
+          Actualizar →
+        </Link>
+      </div>
+      <div className="opacity-40 select-none">{children}</div>
+      <div
+        className="absolute inset-0 z-10 cursor-not-allowed"
+        onClick={() => toast("Personalización disponible en Pro", "info")}
+      />
+    </div>
+  );
+}
+
 function getPlanPrice(plan: string, interval: string | null): string {
   if (interval === "lifetime") return "109,99 € · pago único";
   if (plan === "basic") return interval === "annual" ? "2,99 €/mes · facturado anualmente" : "3,49 €/mes";

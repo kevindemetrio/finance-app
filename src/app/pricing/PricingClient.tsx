@@ -143,7 +143,7 @@ export default function PricingClient({ prices }: Props) {
               <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Basic</h3>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-                  {annual ? "2,99" : "3,49"}€
+                  {annual ? "3,49" : "3,99"}€
                 </span>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">/mes</span>
               </div>
