@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import {
   Entry, MonthData, CategoryBudget, getAllTimeSavings, getCarryover,
@@ -44,6 +45,29 @@ export default function HomePage() {
     historyMonthsLimit, loading: planLoading,
   } = usePlan();
 
+  // How many months back is the viewed month relative to today
+  const monthsBack = (today.getFullYear() - year) * 12 + (today.getMonth() - month);
+  const historyBlocked = !planLoading && isFinite(historyMonthsLimit) && monthsBack > historyMonthsLimit;
+
+  type MonthResult = { data: MonthData; totalSavings: number; catBudgets: CategoryBudget[] };
+  const swrMonthKey = historyBlocked ? null : (["month", year, month] as const);
+  const { data: monthResult, isLoading: monthLoading, error: monthError, mutate: mutateMonth } = useSWR(
+    swrMonthKey,
+    async ([, y, m]) => {
+      const [monthData, carryover, savings, catBdgs] = await Promise.all([
+        loadMonth(y, m), getCarryover(y, m), getAllTimeSavings(y, m), loadCategoryBudgets(y, m),
+      ]);
+      monthData.carryover = carryover;
+      return { data: monthData, totalSavings: savings, catBudgets: catBdgs } satisfies MonthResult;
+    }
+  );
+
+  const data = monthResult?.data ?? emptyMonth();
+  const totalSavings = monthResult?.totalSavings ?? 0;
+  const catBudgets = monthResult?.catBudgets ?? [];
+  const loading = planLoading || (swrMonthKey !== null && monthLoading && !monthResult);
+  const error = monthError ? "Error cargando datos." : "";
+
   // Restore last viewed month on mount
   useEffect(() => {
     try {
@@ -52,11 +76,6 @@ export default function HomePage() {
       if (y && m) { setYear(Number(y)); setMonth(Number(m)); }
     } catch {}
   }, []);
-  const [data, setData]              = useState<MonthData>(emptyMonth());
-  const [totalSavings, setSavings]   = useState(0);
-  const [catBudgets, setCatBudgets]   = useState<CategoryBudget[]>([]);
-  const [loading, setLoading]        = useState(true);
-  const [error, setError]            = useState("");
   const [userEmail, setUserEmail]    = useState("");
   const [search, setSearch]          = useState("");
   const [searchResults, setSearchResults] = useState<Awaited<ReturnType<typeof searchEntries>>>([]);
@@ -67,12 +86,7 @@ export default function HomePage() {
   const [showWithdrawSaving, setShowWithdrawSaving] = useState(false);
   const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
   const { settings, update: updateSettings } = useUserSettings();
-  const fetchId = useRef(0);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
-
-  // How many months back is the viewed month relative to today
-  const monthsBack = (today.getFullYear() - year) * 12 + (today.getMonth() - month);
-  const historyBlocked = !planLoading && isFinite(historyMonthsLimit) && monthsBack > historyMonthsLimit;
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -95,25 +109,6 @@ export default function HomePage() {
     return () => window.removeEventListener("section-colors-updated", loadColors);
   }, []);
 
-  useEffect(() => {
-    if (historyBlocked) {
-      setLoading(false);
-      setError("");
-      setData(emptyMonth());
-      return;
-    }
-    const id = ++fetchId.current;
-    setLoading(true); setError("");
-    Promise.all([loadMonth(year, month), getCarryover(year, month), getAllTimeSavings(year, month), loadCategoryBudgets(year, month)])
-      .then(([monthData, carryover, savings, catBdgs]) => {
-        if (id !== fetchId.current) return;
-        monthData.carryover = carryover;
-        setData(monthData); setSavings(savings); setCatBudgets(catBdgs); setLoading(false);
-      })
-      .catch(() => {
-        if (id === fetchId.current) { setError("Error cargando datos."); setLoading(false); }
-      });
-  }, [year, month, historyBlocked]);
 
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -132,7 +127,9 @@ export default function HomePage() {
 
     const newEntries = await importTemplates(year, month);
     if (newEntries.length > 0) {
-      setData(d => ({ ...d, fixedExpenses: [...d.fixedExpenses, ...newEntries] }));
+      mutateMonth(current => current
+        ? { ...current, data: { ...current.data, fixedExpenses: [...current.data.fixedExpenses, ...newEntries] } }
+        : current, { revalidate: false });
       toast(`+${newEntries.length} importados`);
     } else {
       toast("Ya están todos", "info");
@@ -146,19 +143,30 @@ export default function HomePage() {
   ) => {
     const newEntry = { ...entry, id: entry.id || uid() };
     await saveEntry(newEntry, type, year, month);
-    setData(d => ({ ...d, [section]: [...d[section], newEntry] }));
-    if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
+    mutateMonth(current => current
+      ? { ...current, data: { ...current.data, [section]: [...(current.data[section] as Entry[]), newEntry] } }
+      : current, { revalidate: false });
+    if (type === "saving") getAllTimeSavings(year, month).then(savings =>
+      mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
+    );
     toast("Movimiento añadido");
-  }, [year, month]);
+  }, [year, month, mutateMonth]);
 
   const updateEntryInSection = useCallback(async (
     idx: number, updated: Entry, type: "income"|"fixed"|"variable"|"saving",
     section: keyof Pick<MonthData,"incomes"|"fixedExpenses"|"varExpenses"|"savingsEntries">
   ) => {
     await saveEntry(updated, type, year, month);
-    setData(d => { const arr = [...d[section]] as Entry[]; arr[idx] = updated; return { ...d, [section]: arr }; });
-    if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
-  }, [year, month]);
+    mutateMonth(current => {
+      if (!current) return current;
+      const arr = [...(current.data[section] as Entry[])];
+      arr[idx] = updated;
+      return { ...current, data: { ...current.data, [section]: arr } };
+    }, { revalidate: false });
+    if (type === "saving") getAllTimeSavings(year, month).then(savings =>
+      mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
+    );
+  }, [year, month, mutateMonth]);
 
   const deleteEntryFromSection = useCallback(async (
     idx: number, type: string,
@@ -168,10 +176,14 @@ export default function HomePage() {
     const ok = await confirmDialog({ title: `¿Eliminar "${entry.name}"?`, danger: true });
     if (!ok) return;
     await deleteEntry(entry.id);
-    setData(d => ({ ...d, [section]: (d[section] as Entry[]).filter((_,i) => i !== idx) }));
-    if (type === "saving") getAllTimeSavings(year, month).then(setSavings);
+    mutateMonth(current => current
+      ? { ...current, data: { ...current.data, [section]: (current.data[section] as Entry[]).filter((_,i) => i !== idx) } }
+      : current, { revalidate: false });
+    if (type === "saving") getAllTimeSavings(year, month).then(savings =>
+      mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
+    );
     toast("Movimiento eliminado", "info");
-  }, [data, year, month]);
+  }, [data, year, month, mutateMonth]);
 
   const addIncome    = (e: Entry) => addEntryToSection(e, "income", "incomes");
   const updateIncome = (i: number, e: Entry) => updateEntryInSection(i, e, "income", "incomes");
@@ -185,7 +197,12 @@ export default function HomePage() {
   const addSaving    = (e: Entry) => addEntryToSection(e, "saving", "savingsEntries");
   const updateSaving = (i: number, e: Entry) => updateEntryInSection(i, e, "saving", "savingsEntries");
   const deleteSaving = (i: number) => deleteEntryFromSection(i, "saving", "savingsEntries");
-  const handleBudget = async (v: number) => { await saveMonthConfig(year, month, v); setData(d => ({...d, varBudget:v})); };
+  const handleBudget = async (v: number) => {
+    await saveMonthConfig(year, month, v);
+    mutateMonth(current => current
+      ? { ...current, data: { ...current.data, varBudget: v } }
+      : current, { revalidate: false });
+  };
 
   function saveMonth(y: number, m: number) {
     try { localStorage.setItem("last_month_year", String(y)); localStorage.setItem("last_month_month", String(m)); } catch {}
@@ -449,7 +466,9 @@ export default function HomePage() {
                 );
               })}
             </div>
-            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} disabled={!canWrite} onChange={setCatBudgets} onVarBudgetChange={handleBudget} />
+            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} disabled={!canWrite}
+                onChange={newBudgets => mutateMonth(current => current ? { ...current, catBudgets: newBudgets } : current, { revalidate: false })}
+                onVarBudgetChange={handleBudget} />
           </>
         )}
       </div>

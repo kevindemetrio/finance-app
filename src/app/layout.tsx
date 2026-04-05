@@ -5,6 +5,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { ToastProvider } from "./components/Toast";
 import { CategoriesProvider } from "./components/CategoriesProvider";
 import { TrialBanner } from "./components/TrialBanner";
+import { SWRProvider } from "./components/SWRProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
@@ -35,13 +36,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans`}>
-        <ThemeProvider>
-          <CategoriesProvider>
-            <ToastProvider />
-            <TrialBanner />
-            {children}
-          </CategoriesProvider>
-        </ThemeProvider>
+        <SWRProvider>
+          <ThemeProvider>
+            <CategoriesProvider>
+              <ToastProvider />
+              <TrialBanner />
+              {children}
+            </CategoriesProvider>
+          </ThemeProvider>
+        </SWRProvider>
       </body>
     </html>
   );

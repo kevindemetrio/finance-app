@@ -4,7 +4,8 @@
       "Bash(npx --yes next build)",
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(xargs grep:*)",
-      "Bash(node -e \"const s = require\\('stripe'\\); console.log\\(require\\('./node_modules/stripe/package.json'\\).version\\)\")"
+      "Bash(node -e \"const s = require\\('stripe'\\); console.log\\(require\\('./node_modules/stripe/package.json'\\).version\\)\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

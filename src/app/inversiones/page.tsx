@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import {
   Investment, InvestmentCategory, CATEGORY_COLORS, CATEGORY_LABELS,
@@ -31,40 +32,24 @@ export default function InversionesPage() {
   const router = useRouter();
   const { canUseInvestments, loading: planLoading } = usePlan();
 
-  const [investments, setInvestments] = useState<Investment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [catOrder, setCatOrder] = useState<InvestmentCategory[]>(DEFAULT_CAT_ORDER);
   const { settings, update: updateSettings } = useUserSettings();
-  const fetchId = useRef(0);
 
-  const load = useCallback(async () => {
-    const id = ++fetchId.current;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await loadInvestments();
-      if (id !== fetchId.current) return;
-      setInvestments(data);
-    } catch (e) {
-      console.error(e);
-      setError("Error cargando inversiones.");
-    } finally {
-      if (id === fetchId.current) setLoading(false);
-    }
-  }, []);
+  const { data: investments = [], isLoading: loading, error: swrError, mutate: mutateInvestments } = useSWR(
+    !planLoading && canUseInvestments ? "investments" : null,
+    loadInvestments
+  );
+  const error = swrError ? "Error cargando inversiones." : "";
 
   useEffect(() => {
-    if (planLoading || !canUseInvestments) return;
-    load();
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
     const saved = localStorage.getItem(INV_ORDER_KEY);
     if (saved) { try { setCatOrder(JSON.parse(saved)); } catch {} }
-  }, [load, planLoading, canUseInvestments]);
+  }, []);
 
   function moveCat(cat: InvestmentCategory, dir: -1 | 1) {
     setCatOrder(prev => {
@@ -244,7 +229,7 @@ export default function InversionesPage() {
                 key={cat}
                 category={cat}
                 investments={grouped[cat]}
-                onChange={load}
+                onChange={mutateInvestments}
               />
             ))}
           </div>

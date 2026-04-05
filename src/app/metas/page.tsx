@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { Goal, createGoal, deleteGoal, loadGoals, fmtEur } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
 
@@ -18,8 +19,6 @@ const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"
 const GOALS_ORDER_KEY = "finanzas_goals_order";
 
 export default function MetasPage() {
-  const [goals, setGoals]     = useState<Goal[]>([]);
-  const [loading, setLoading] = useState(true);
   const [adding, setAdding]   = useState(false);
   const [userEmail, setUserEmail]   = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -34,23 +33,27 @@ export default function MetasPage() {
 
   const [goalOrder, setGoalOrder] = useState<string[]>([]);
 
-  const reload = useCallback(() => loadGoals().then(g => {
-    setGoals(g);
-    setGoalOrder(prev => {
-      const existing = new Set(prev);
-      const newIds = g.map(x => x.id).filter(id => !existing.has(id));
-      return [...prev.filter(id => g.some(x => x.id === id)), ...newIds];
-    });
-  }), []);
+  const { data: goals = [], isLoading: loading, mutate: mutateGoals } = useSWR(
+    "goals",
+    loadGoals,
+    {
+      onSuccess: (g) => {
+        setGoalOrder(prev => {
+          const existing = new Set(prev);
+          const newIds = g.map(x => x.id).filter(id => !existing.has(id));
+          return [...prev.filter(id => g.some(x => x.id === id)), ...newIds];
+        });
+      },
+    }
+  );
 
   useEffect(() => {
     const saved = localStorage.getItem(GOALS_ORDER_KEY);
     if (saved) { try { setGoalOrder(JSON.parse(saved)); } catch {} }
-    reload().then(() => setLoading(false));
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
-  }, [reload]);
+  }, []);
 
   // Gates — don't apply while plan is loading
   const writeBlocked   = !planLoading && !canWrite;
@@ -91,7 +94,7 @@ export default function MetasPage() {
     await createGoal(newName.trim(), parseFloat(newTarget), newDate || undefined, newColor);
     setNewName(""); setNewTarget(""); setNewDate(""); setNewColor(GOAL_COLORS[0]); setAdding(false);
     toast("Meta creada");
-    reload();
+    mutateGoals();
   }
 
   async function handleDelete(id: string) {
@@ -100,7 +103,7 @@ export default function MetasPage() {
     await deleteGoal(id);
     saveGoalOrder(goalOrder.filter(x => x !== id));
     toast("Meta eliminada", "info");
-    reload();
+    mutateGoals();
   }
 
   const sortedGoals = [...goals].sort((a, b) => {
@@ -231,7 +234,7 @@ export default function MetasPage() {
                 key={goal.id}
                 goal={goal}
                 onDelete={handleDelete}
-                onSavedAmountChange={reload}
+                onSavedAmountChange={mutateGoals}
                 readOnly={writeBlocked}
               />
             ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { loadAnnualData, loadCategoryData, fmtEur } from "../lib/data";
 import { createClient } from "../lib/supabase/client";
 import { Navbar, DesktopTabs } from "../components/Navbar";
@@ -20,24 +21,25 @@ export default function DashboardPage() {
   const [year, setYear]     = useState(today.getFullYear());
   const [month, setMonth]   = useState(today.getMonth());
   const [chart, setChart]   = useState<ChartType>("annual");
-  const [annual, setAnnual] = useState<Awaited<ReturnType<typeof loadAnnualData>>>([]);
-  const [catData, setCatData] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const { settings, update: updateSettings } = useUserSettings();
+
+  const { data: annual = [], isLoading: annualLoading } = useSWR(
+    `annualData-${year}`,
+    () => loadAnnualData(year)
+  );
+  const { data: catData = {}, isLoading: catLoading } = useSWR(
+    `categoryData-${year}-${month}`,
+    () => loadCategoryData(year, month)
+  );
+  const loading = annualLoading || catLoading;
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
       if (data.user?.email) setUserEmail(data.user.email);
     });
   }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([loadAnnualData(year), loadCategoryData(year, month)])
-      .then(([a, c]) => { setAnnual(a); setCatData(c); setLoading(false); });
-  }, [year, month]);
 
   const maxBalance = Math.max(...annual.map(m => Math.abs(m.balance)), 1);
   const maxIncome  = Math.max(...annual.map(m => m.income), 1);
