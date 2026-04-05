@@ -770,7 +770,6 @@ export default function AjustesPage() {
             <div className="px-4 py-3">
               <p className="text-xs text-neutral-400 dark:text-neutral-500 leading-relaxed">
                 Tus datos se almacenan de forma segura en Supabase. No compartimos información personal con terceros.
-                Puedes exportar o eliminar tu cuenta desde la sección Cuenta.
               </p>
             </div>
           </SettingsCard>
