@@ -149,7 +149,7 @@ export default function PricingClient({ prices }: Props) {
               </div>
               {annual && (
                 <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                  Facturado anualmente (35,88 €/año)
+                  Facturado anualmente (41,99 €/año)
                 </p>
               )}
             </div>
