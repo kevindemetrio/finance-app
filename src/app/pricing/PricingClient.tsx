@@ -203,13 +203,13 @@ export default function PricingClient({ prices }: Props) {
               <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Pro</h3>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-                  {annual ? "4,99" : "5,99"}€
+                  {annual ? "3,99" : "4,99"}€
                 </span>
                 <span className="text-sm text-neutral-500 dark:text-neutral-400">/mes</span>
               </div>
               {annual && (
                 <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                  Facturado anualmente (59,88 €/año)
+                  Facturado anualmente (47,99 €/año)
                 </p>
               )}
             </div>
@@ -286,7 +286,6 @@ export default function PricingClient({ prices }: Props) {
 
         {/* Nota inferior */}
         <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 mt-8">
-          Todos los planes incluyen 14 días de prueba gratuita con acceso completo.
           Cancela cuando quieras.
         </p>
       </div>
