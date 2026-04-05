@@ -76,7 +76,7 @@ export default function PricingClient({ prices }: Props) {
 
   const isCurrentBasic = !planLoading && currentPlan === "basic";
   const isCurrentPro = !planLoading && currentPlan === "pro";
-  const isCurrentFamily = !planLoading && currentPlan === "family";
+  const isLifetime = !planLoading && planInfo.isLifetime;
 
   return (
     <SeasonWrapper>
@@ -243,44 +243,49 @@ export default function PricingClient({ prices }: Props) {
             )}
           </div>
 
-          {/* ── Family ── */}
-          <div className={`relative rounded-2xl border p-6 flex flex-col bg-white dark:bg-neutral-900 transition-colors
-            ${isCurrentFamily
+          {/* ── Lifetime ── */}
+          <div className={`relative rounded-2xl border p-6 flex flex-col bg-white dark:bg-neutral-900 transition-colors opacity-75
+            ${isLifetime
               ? "border-brand-blue dark:border-brand-blue"
               : "border-neutral-200 dark:border-neutral-800"}`}>
-            {isCurrentFamily && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full bg-brand-blue text-white">
-                Plan actual
-              </span>
-            )}
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap
+              bg-neutral-500 text-white">
+              {isLifetime ? "Plan actual" : "Próximamente"}
+            </span>
 
             <div className="mb-4">
-              <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Family</h3>
-              <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-                  {annual ? "8,49" : "9,99"}€
-                </span>
-                <span className="text-sm text-neutral-500 dark:text-neutral-400">/mes</span>
-              </div>
-              {annual && (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                  Facturado anualmente (101,88 €/año)
-                </p>
-              )}
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Lifetime</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">Pago único · Acceso para siempre</p>
             </div>
 
-            <ul className="space-y-2 mb-6 flex-1">
-              <FeatureRow included label="Todo de Pro" />
-              <FeatureRow included label="3 cuentas incluidas" />
-              <FeatureRow included label="Panel familiar compartido" />
+            <div className="mb-4">
+              <span className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">109,99 €</span>
+              <span className="text-neutral-400 text-sm ml-1">· pago único</span>
+            </div>
+
+            <ul className="space-y-2 mb-6 flex-1 text-sm">
+              {[
+                "Todo lo del plan Pro",
+                "Sin renovaciones mensuales",
+                "Acceso mientras el servicio esté activo",
+                "Todas las actualizaciones futuras del plan Pro",
+              ].map(f => (
+                <li key={f} className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+                  <span className="text-brand-green">✓</span> {f}
+                </li>
+              ))}
             </ul>
 
             <button
               disabled
-              className="w-full py-2.5 rounded-xl text-sm font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
+              className="w-full py-2.5 rounded-xl text-sm font-medium bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed"
             >
-              Próximamente
+              {isLifetime ? "Tu plan actual" : "Próximamente"}
             </button>
+
+            <p className="text-[11px] text-neutral-400 text-center mt-3">
+              Disponible pronto · Oferta de lanzamiento limitada
+            </p>
           </div>
         </div>
 

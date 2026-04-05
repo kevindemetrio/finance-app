@@ -15,6 +15,7 @@ export interface Subscription {
   currentPeriodEnd: string | null;
   familyOwnerId: string | null;
   provider: string;
+  billingInterval: "monthly" | "annual" | "lifetime" | null;
 }
 
 function mapRow(row: Record<string, unknown>): Subscription {
@@ -25,6 +26,7 @@ function mapRow(row: Record<string, unknown>): Subscription {
     currentPeriodEnd: (row.current_period_end as string) ?? null,
     familyOwnerId: (row.family_owner_id as string) ?? null,
     provider: (row.provider as string) ?? "",
+    billingInterval: (row.billing_interval as "monthly" | "annual" | "lifetime" | null) ?? null,
   };
 }
 
@@ -39,7 +41,7 @@ export async function loadSubscription(): Promise<Subscription | null> {
   const { data, error } = await supabase
     .from("subscriptions")
     .select(
-      "plan, status, trial_ends_at, current_period_end, family_owner_id, provider"
+      "plan, status, trial_ends_at, current_period_end, family_owner_id, provider, billing_interval"
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -53,7 +55,7 @@ export async function loadSubscription(): Promise<Subscription | null> {
     const { data: ownerData } = await supabase
       .from("subscriptions")
       .select(
-        "plan, status, trial_ends_at, current_period_end, family_owner_id, provider"
+        "plan, status, trial_ends_at, current_period_end, family_owner_id, provider, billing_interval"
       )
       .eq("user_id", sub.familyOwnerId)
       .maybeSingle();

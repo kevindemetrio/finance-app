@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
         ? new Date(periodEndTs * 1000).toISOString()
         : null;
 
+      const priceInterval = subscription.items.data[0]?.price?.recurring?.interval;
+      const billingInterval = priceInterval === "year" ? "annual" : "monthly";
+
       const payload = {
         plan: plan ?? "basic",
         status: "active",
@@ -63,6 +66,7 @@ export async function POST(request: NextRequest) {
         provider_customer_id: subscription.customer as string,
         provider_subscription_id: subscription.id,
         current_period_end: periodEnd,
+        billing_interval: billingInterval,
       };
 
       // Intenta actualizar primero
@@ -128,6 +132,27 @@ export async function POST(request: NextRequest) {
         .from("subscriptions")
         .update({ status: "past_due" })
         .eq("provider_customer_id", customerId);
+      break;
+    }
+
+    case "payment_intent.succeeded": {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const userId = paymentIntent.metadata?.user_id;
+      // Solo procesar si es un pago lifetime (detectado por metadata)
+      if (!userId || paymentIntent.metadata?.plan !== "lifetime") break;
+
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          plan: "pro",
+          status: "active",
+          billing_interval: "lifetime",
+          provider: "stripe",
+          provider_customer_id: (paymentIntent.customer as string) ?? null,
+          provider_subscription_id: null,
+          current_period_end: null, // nunca expira
+        })
+        .eq("user_id", userId);
       break;
     }
 

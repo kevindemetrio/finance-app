@@ -25,6 +25,9 @@ export interface PlanInfo {
   canSearchCrossMes: boolean;
   goalsLimit: number;
   historyMonthsLimit: number;
+
+  billingInterval: "monthly" | "annual" | "lifetime" | null;
+  isLifetime: boolean;
 }
 
 const FALLBACK: PlanInfo = {
@@ -42,6 +45,8 @@ const FALLBACK: PlanInfo = {
   canSearchCrossMes: true,
   goalsLimit: Infinity,
   historyMonthsLimit: Infinity,
+  billingInterval: null,
+  isLifetime: false,
 };
 
 function daysLeft(isoDate: string | null): number {
@@ -53,16 +58,22 @@ function daysLeft(isoDate: string | null): number {
 function buildPlanInfo(
   plan: Plan,
   status: SubscriptionStatus,
-  trialEndsAt: string | null
+  trialEndsAt: string | null,
+  billingInterval: "monthly" | "annual" | "lifetime" | null
 ): Omit<PlanInfo, "loading"> {
   const isTrial = plan === "trial";
   const days = isTrial ? daysLeft(trialEndsAt) : 0;
   const trialExpired = isTrial && days === 0;
+  const isLifetime = billingInterval === "lifetime";
 
   let effectivePlan: "basic" | "pro";
   let canWrite: boolean;
 
-  if (isTrial && !trialExpired) {
+  if (isLifetime) {
+    // Lifetime nunca expira — acceso Pro permanente
+    effectivePlan = "pro";
+    canWrite = true;
+  } else if (isTrial && !trialExpired) {
     effectivePlan = "pro";
     canWrite = true;
   } else if (
@@ -96,6 +107,8 @@ function buildPlanInfo(
     canSearchCrossMes: isPro,
     goalsLimit: isPro ? Infinity : 1,
     historyMonthsLimit: isPro ? Infinity : 3,
+    billingInterval,
+    isLifetime,
   };
 }
 
@@ -111,7 +124,7 @@ export function usePlan(): PlanInfo {
         return;
       }
       setInfo({
-        ...buildPlanInfo(sub.plan, sub.status, sub.trialEndsAt),
+        ...buildPlanInfo(sub.plan, sub.status, sub.trialEndsAt, sub.billingInterval),
         loading: false,
       });
     });

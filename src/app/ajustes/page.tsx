@@ -349,6 +349,17 @@ export default function AjustesPage() {
               <div className="px-4 py-4">
                 <div className="h-4 w-32 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
               </div>
+            ) : planInfo.isLifetime ? (
+              <>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
+                  <div>
+                    <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Pro Lifetime</p>
+                    <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Acceso Pro de por vida · Sin renovaciones</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">LIFETIME</span>
+                </div>
+                <VerPlanesButton />
+              </>
             ) : planInfo.isTrial && !planInfo.trialExpired ? (
               <>
                 <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
@@ -399,7 +410,7 @@ export default function AjustesPage() {
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Basic</p>
                     <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      3,49 €/mes · Renovación: {periodEnd ?? "—"}
+                      {getPlanPrice("basic", planInfo.billingInterval)} · Renovación: {periodEnd ?? "—"}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
@@ -421,7 +432,7 @@ export default function AjustesPage() {
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Pro</p>
                     <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      4,99 €/mes · Renovación: {periodEnd ?? "—"}
+                      {getPlanPrice("pro", planInfo.billingInterval)} · Renovación: {periodEnd ?? "—"}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
@@ -454,8 +465,21 @@ export default function AjustesPage() {
           {/* ── FINANZAS ────────────────────────────────────────────────── */}
           <SettingsCard label="FINANZAS" dot="bg-brand-green">
 
+            {/* Banner Pro para usuarios Basic */}
+            {planInfo.effectivePlan === "basic" && (
+              <div className="mx-4 my-2 px-3 py-2 rounded-lg bg-brand-green-light dark:bg-green-950/50
+                border border-brand-green/20 flex items-center justify-between">
+                <p className="text-xs text-brand-green-dark dark:text-green-400">
+                  🔒 Personalización disponible en Pro
+                </p>
+                <Link href="/pricing" className="text-xs font-medium text-brand-green hover:underline">
+                  Actualizar →
+                </Link>
+              </div>
+            )}
+
             {/* Orden de secciones */}
-            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Orden de secciones</p>
               <div className="space-y-0.5">
                 {settings.sectionOrder.map((key, i) => (
@@ -478,7 +502,7 @@ export default function AjustesPage() {
             </div>
 
             {/* Campos visibles por sección */}
-            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Campos visibles</p>
               <div className="space-y-0.5">
                 {settings.sectionOrder.map(key => {
@@ -554,7 +578,7 @@ export default function AjustesPage() {
             </div>
 
             {/* Section colors */}
-            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+            <div className={`px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 ${planInfo.effectivePlan === "basic" ? "opacity-40 pointer-events-none" : ""}`}>
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Colores de secciones</p>
               <div className="space-y-3">
                 {settings.sectionOrder.map(key => (
@@ -821,6 +845,13 @@ function AjGridIcon() {
 function AjTourIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
 }
+function getPlanPrice(plan: string, interval: string | null): string {
+  if (interval === "lifetime") return "109,99 € · pago único";
+  if (plan === "basic") return interval === "annual" ? "2,99 €/mes · facturado anualmente" : "3,49 €/mes";
+  if (plan === "pro")   return interval === "annual" ? "3,99 €/mes · facturado anualmente" : "4,99 €/mes";
+  return "";
+}
+
 function VerPlanesButton() {
   return (
     <div className="px-4 pb-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
