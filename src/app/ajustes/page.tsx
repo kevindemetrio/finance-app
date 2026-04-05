@@ -421,7 +421,7 @@ export default function AjustesPage() {
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Pro</p>
                     <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      5,99 €/mes · Renovación: {periodEnd ?? "—"}
+                      4,99 €/mes · Renovación: {periodEnd ?? "—"}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
