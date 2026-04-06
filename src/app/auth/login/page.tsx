@@ -97,6 +97,19 @@ export default function LoginPage() {
   const [resetSent, setResetSent]     = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  // Si el usuario llega a /auth/login con una sesión activa que no es de
+  // recovery (p.ej. sesión residual de un enlace de reset ya procesado),
+  // la cerramos para evitar que el middleware la detecte y redirija a la app.
+  useEffect(() => {
+    const supabase = createClient();
+    const hash = window.location.hash;
+    if (!hash.includes("type=recovery") && !hash.includes("access_token")) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) supabase.auth.signOut();
+      });
+    }
+  }, []);
+
   const accentColor = "#1D9E75";
   const pageBg      = theme === "light" ? "#FDFBF7" : "#0a0a0a";
   const cardBg      = theme === "light" ? "#FFFFFF" : "rgba(255,255,255,0.07)";
