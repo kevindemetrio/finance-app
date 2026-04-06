@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "../lib/supabase/client";
 import { usePlan } from "../hooks/usePlan";
-import { createCategory, deleteCategory, loadCategories, loadGoals, Goal } from "../lib/data";
+import { createCategory, deleteCategory, loadCategories, loadGoals, exportAllDataAsCSV, Goal } from "../lib/data";
 import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
@@ -76,6 +76,9 @@ export default function AjustesPage() {
   const [defaultGoalColor, setDefaultGoalColor] = useState(GOAL_COLORS[0]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [goalOrder, setGoalOrder] = useState<string[]>([]);
+
+  // ── EXPORTAR CSV ─────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
 
   // ── INVERSIONES ─────────────────────────────────────────────────────────
   const [invOrder, setInvOrder] = useState<string[]>(INV_CATS_META.map(c => c.key));
@@ -257,6 +260,20 @@ export default function AjustesPage() {
       try { localStorage.setItem(INV_ORDER_KEY, JSON.stringify(order)); } catch {}
       return order;
     });
+  }
+
+  // ── EXPORTAR CSV ─────────────────────────────────────────────────────────
+  async function handleExportCSV() {
+    setExporting(true);
+    try {
+      await exportAllDataAsCSV();
+      toast("Datos exportados correctamente");
+    } catch (e) {
+      console.error(e);
+      toast("Error al exportar los datos", "error");
+    } finally {
+      setExporting(false);
+    }
   }
 
   // ── TOUR ──────────────────────────────────────────────────────────────────
@@ -782,6 +799,31 @@ export default function AjustesPage() {
             </div>
           </SettingsCard>
 
+          {/* ── MIS DATOS ───────────────────────────────────────────────── */}
+          <SettingsCard label="MIS DATOS" dot="bg-brand-blue">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  Exportar mis datos
+                </p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
+                  Descarga todos tus movimientos, metas e inversiones en CSV
+                </p>
+              </div>
+              <button
+                onClick={handleExportCSV}
+                disabled={exporting}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg
+                  bg-brand-blue-light dark:bg-blue-950/60 text-brand-blue
+                  hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed shrink-0 ml-4"
+              >
+                <DownloadIcon />
+                {exporting ? "Exportando…" : "Exportar CSV"}
+              </button>
+            </div>
+          </SettingsCard>
+
           {/* ── AYUDA ───────────────────────────────────────────────────── */}
           <SettingsCard label="AYUDA" dot="bg-neutral-400">
             <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
@@ -843,6 +885,15 @@ function AjGridIcon() {
 }
 function AjTourIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+}
+function DownloadIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  );
 }
 function ProtectedSection({ isLocked, children }: { isLocked: boolean; children: React.ReactNode }) {
   if (!isLocked) return <>{children}</>;

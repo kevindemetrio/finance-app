@@ -34,13 +34,13 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const { theme } = useTheme();
 
-  const [password, setPassword]     = useState("");
-  const [confirm, setConfirm]       = useState("");
-  const [error, setError]           = useState("");
-  const [loading, setLoading]       = useState(false);
-  const [done, setDone]             = useState(false);
+  const [password, setPassword]         = useState("");
+  const [confirm, setConfirm]           = useState("");
+  const [error, setError]               = useState("");
+  const [loading, setLoading]           = useState(false);
+  const [done, setDone]                 = useState(false);
   const [validSession, setValidSession] = useState(false);
-  const [checking, setChecking]     = useState(true);
+  const [checking, setChecking]         = useState(true);
 
   const accentColor = "#1D9E75";
   const pageBg      = theme === "light" ? "#FDFBF7" : "#0a0a0a";
@@ -52,10 +52,9 @@ export default function ResetPasswordPage() {
   const inputBorder = theme === "light" ? "#E8E2D8" : "rgba(255,255,255,0.12)";
 
   useEffect(() => {
-    // Supabase maneja el token del hash automáticamente al inicializar el cliente.
-    // Escuchamos el evento PASSWORD_RECOVERY para confirmar la sesión de reset.
     const supabase = createClient();
 
+    // Supabase detecta el token del hash automáticamente y emite PASSWORD_RECOVERY
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setValidSession(true);
@@ -63,8 +62,8 @@ export default function ResetPasswordPage() {
       setChecking(false);
     });
 
-    // Si no recibimos ningún evento en 3 s, el enlace es inválido o ya fue usado.
-    const timeout = setTimeout(() => setChecking(false), 3000);
+    // Si no hay evento en 2 s, el enlace es inválido o ya fue usado
+    const timeout = setTimeout(() => setChecking(false), 2000);
 
     return () => {
       subscription.unsubscribe();
@@ -73,26 +72,21 @@ export default function ResetPasswordPage() {
   }, []);
 
   async function handleReset() {
-    if (password.length < 6) {
-      setError("Mínimo 6 caracteres");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
+    if (password.length < 6) { setError("Mínimo 6 caracteres"); return; }
+    if (password !== confirm) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true);
     setError("");
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
+    if (updateError) { setError(updateError.message); return; }
     setDone(true);
     setTimeout(() => router.push("/"), 2000);
   }
+
+  // Indicador de coincidencia de contraseñas
+  const showMatchIndicator = password.length > 0 && confirm.length > 0;
+  const passwordsMatch = password === confirm;
 
   return (
     <div
@@ -123,33 +117,56 @@ export default function ResetPasswordPage() {
               <span style={{ color: textPrimary }}>spen</span>
               <span style={{ color: accentColor }}>fly</span>
             </h1>
-            <p className="text-sm mt-1" style={{ color: textMuted }}>Nueva contraseña</p>
+            <p className="text-sm mt-1" style={{ color: textMuted }}>
+              {checking ? "Verificando enlace…" : validSession ? "Introduce tu nueva contraseña" : "Enlace no válido"}
+            </p>
           </div>
 
-          {/* Estado: verificando enlace */}
+          {/* ── Estado: verificando (spinner) ───────────────────────────────── */}
           {checking && (
-            <p className="text-sm text-center py-4" style={{ color: textMuted }}>
-              Verificando enlace…
-            </p>
+            <div className="flex justify-center py-6">
+              <svg
+                className="animate-spin"
+                width="28" height="28" viewBox="0 0 24 24" fill="none"
+                stroke={accentColor} strokeWidth="2.5" strokeLinecap="round"
+              >
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+            </div>
           )}
 
-          {/* Estado: enlace inválido */}
+          {/* ── Estado: enlace inválido ─────────────────────────────────────── */}
           {!checking && !validSession && (
             <div className="text-center space-y-4">
-              <p className="text-sm" style={{ color: textMuted }}>
-                El enlace de recuperación no es válido o ya ha sido utilizado.
-              </p>
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                style={{ background: "rgba(226,75,74,0.12)" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" strokeWidth="2.5" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-1" style={{ color: textPrimary }}>
+                  El enlace no es válido o ha expirado
+                </p>
+                <p className="text-xs" style={{ color: textMuted }}>
+                  Solicita un nuevo enlace de recuperación desde la pantalla de inicio de sesión.
+                </p>
+              </div>
               <Link
                 href="/auth/login"
-                className="inline-block text-sm font-medium hover:underline"
-                style={{ color: accentColor }}
+                className="inline-block text-sm font-medium px-4 py-2 rounded-xl text-white transition-opacity hover:opacity-90"
+                style={{ background: accentColor }}
               >
-                Volver al inicio de sesión
+                Volver al login
               </Link>
             </div>
           )}
 
-          {/* Estado: éxito */}
+          {/* ── Estado: éxito ────────────────────────────────────────────────── */}
           {done && (
             <div className="text-center space-y-3">
               <div
@@ -157,21 +174,22 @@ export default function ResetPasswordPage() {
                 style={{ background: `${accentColor}20` }}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
+                  <polyline points="20 6 9 17 4 12"/>
                 </svg>
               </div>
-              <p className="text-sm font-medium" style={{ color: textPrimary }}>
-                Contraseña actualizada
+              <p className="text-sm font-semibold" style={{ color: textPrimary }}>
+                ✓ Contraseña actualizada correctamente
               </p>
               <p className="text-xs" style={{ color: textMuted }}>
-                Redirigiendo a la app…
+                Redirigiendo…
               </p>
             </div>
           )}
 
-          {/* Estado: formulario */}
+          {/* ── Estado: formulario ───────────────────────────────────────────── */}
           {!checking && validSession && !done && (
             <div className="space-y-4">
+              {/* Nueva contraseña */}
               <div>
                 <label
                   className="block text-xs uppercase tracking-widest mb-1.5"
@@ -184,7 +202,7 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleReset()}
-                  placeholder="••••••••"
+                  placeholder="Mínimo 6 caracteres"
                   autoComplete="new-password"
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
                   style={{ background: inputBg, border: `1px solid ${inputBorder}`, color: textPrimary }}
@@ -193,6 +211,7 @@ export default function ResetPasswordPage() {
                 />
               </div>
 
+              {/* Confirmar contraseña */}
               <div>
                 <label
                   className="block text-xs uppercase tracking-widest mb-1.5"
@@ -208,10 +227,27 @@ export default function ResetPasswordPage() {
                   placeholder="••••••••"
                   autoComplete="new-password"
                   className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-                  style={{ background: inputBg, border: `1px solid ${inputBorder}`, color: textPrimary }}
-                  onFocus={e => (e.target.style.borderColor = accentColor)}
-                  onBlur={e => (e.target.style.borderColor = inputBorder)}
+                  style={{
+                    background: inputBg,
+                    border: `1px solid ${showMatchIndicator ? (passwordsMatch ? accentColor : "#E24B4A") : inputBorder}`,
+                    color: textPrimary,
+                  }}
+                  onFocus={e => (e.target.style.borderColor = showMatchIndicator ? (passwordsMatch ? accentColor : "#E24B4A") : accentColor)}
+                  onBlur={e => (e.target.style.borderColor = showMatchIndicator ? (passwordsMatch ? accentColor : "#E24B4A") : inputBorder)}
                 />
+                {/* Indicador de coincidencia */}
+                {showMatchIndicator && (
+                  <p
+                    className="text-xs mt-1.5 flex items-center gap-1"
+                    style={{ color: passwordsMatch ? accentColor : "#E24B4A" }}
+                  >
+                    <span
+                      className="inline-block w-1.5 h-1.5 rounded-full"
+                      style={{ background: passwordsMatch ? accentColor : "#E24B4A" }}
+                    />
+                    {passwordsMatch ? "Las contraseñas coinciden" : "Las contraseñas no coinciden"}
+                  </p>
+                )}
               </div>
 
               {error && (
@@ -226,10 +262,10 @@ export default function ResetPasswordPage() {
                 className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
                 style={{ background: accentColor }}
               >
-                {loading ? "Guardando…" : "Guardar contraseña"}
+                {loading ? "Guardando…" : "Actualizar contraseña"}
               </button>
 
-              <p className="text-center text-sm mt-2" style={{ color: textMuted }}>
+              <p className="text-center text-sm" style={{ color: textMuted }}>
                 <Link href="/auth/login" className="hover:underline" style={{ color: accentColor }}>
                   Volver al inicio de sesión
                 </Link>

@@ -519,3 +519,128 @@ export async function deleteGoalContribution(id: string, amount: number, goalId:
     await supabase.from("goals").update({ saved_amount: newSaved }).eq("id", goalId);
   }
 }
+
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+
+export async function exportAllDataAsCSV(): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const [entriesRes, goalsRes, investmentsRes, contributionsRes] = await Promise.all([
+    supabase.from("entries").select("*").order("date", { ascending: false }),
+    supabase.from("goals").select("*").order("created_at"),
+    supabase.from("investments").select("*").order("created_at"),
+    supabase.from("investment_contributions").select("*").order("date", { ascending: false }),
+  ]);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entries       = (entriesRes.data       || []) as Record<string, any>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const goals         = (goalsRes.data         || []) as Record<string, any>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const investments   = (investmentsRes.data   || []) as Record<string, any>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contributions = (contributionsRes.data || []) as Record<string, any>[];
+
+  function toCSV(rows: Record<string, unknown>[], columns: string[]): string {
+    const header = columns.join(",");
+    const body = rows.map(row =>
+      columns.map(col => {
+        const val = row[col] ?? "";
+        const str = String(val).replace(/"/g, '""');
+        return str.includes(",") || str.includes("\n") || str.includes('"') ? `"${str}"` : str;
+      }).join(",")
+    ).join("\n");
+    return header + "\n" + body;
+  }
+
+  const MONTH_NAMES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+  const entriesCSV = toCSV(
+    entries.map(e => ({
+      fecha:     e.date,
+      año:       e.year,
+      mes:       MONTH_NAMES[e.month as number] ?? e.month,
+      tipo:      e.type === "income" ? "Ingreso"
+               : e.type === "fixed" ? "Gasto fijo"
+               : e.type === "variable" ? "Gasto variable" : "Ahorro",
+      descripcion: e.name,
+      importe:   e.amount,
+      categoria: e.category ?? "",
+      notas:     e.notes ?? "",
+      cobrado:   e.paid ? "Sí" : "No",
+    })),
+    ["fecha","año","mes","tipo","descripcion","importe","categoria","notas","cobrado"]
+  );
+
+  const goalsCSV = toCSV(
+    goals.map(g => ({
+      nombre:        g.name,
+      objetivo:      g.target_amount,
+      ahorrado:      g.saved_amount,
+      progreso_pct:  g.target_amount > 0
+        ? Math.round((Number(g.saved_amount) / Number(g.target_amount)) * 100) + "%" : "0%",
+      fecha_limite:  g.deadline ?? "",
+      creada:        (g.created_at as string)?.slice(0, 10) ?? "",
+    })),
+    ["nombre","objetivo","ahorrado","progreso_pct","fecha_limite","creada"]
+  );
+
+  const investmentsCSV = toCSV(
+    investments.map(inv => {
+      const invContribs = contributions.filter(c => c.investment_id === inv.id);
+      const total = invContribs.reduce((a, c) => a + Number(c.amount), 0);
+      return {
+        nombre:           inv.name,
+        isin:             inv.isin ?? "",
+        categoria:        inv.category === "emergency" ? "Fondo emergencia"
+                        : inv.category === "variable"  ? "Renta variable"
+                        : inv.category === "fixed"     ? "Renta fija" : "Acciones directas",
+        total_aportado:   total,
+        num_aportaciones: invContribs.length,
+        creada:           (inv.created_at as string)?.slice(0, 10) ?? "",
+      };
+    }),
+    ["nombre","isin","categoria","total_aportado","num_aportaciones","creada"]
+  );
+
+  const contributionsCSV = toCSV(
+    contributions.map(c => {
+      const inv = investments.find(i => i.id === c.investment_id);
+      return {
+        inversion: inv?.name ?? c.investment_id,
+        fecha:     c.date,
+        importe:   c.amount,
+        notas:     c.notes ?? "",
+      };
+    }),
+    ["inversion","fecha","importe","notas"]
+  );
+
+  const fullCSV = [
+    "=== MOVIMIENTOS FINANCIEROS ===",
+    entriesCSV,
+    "",
+    "=== METAS DE AHORRO ===",
+    goalsCSV,
+    "",
+    "=== INVERSIONES ===",
+    investmentsCSV,
+    "",
+    "=== APORTACIONES A INVERSIONES ===",
+    contributionsCSV,
+  ].join("\n");
+
+  // BOM UTF-8 para que Excel abra tildes correctamente
+  const blob = new Blob(["\uFEFF" + fullCSV], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `spenfly-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
