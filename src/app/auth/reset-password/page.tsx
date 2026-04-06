@@ -54,44 +54,25 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Capturar el hash INMEDIATAMENTE antes de que Next.js lo limpie.
-    // URLSearchParams maneja la cadena después del # directamente.
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", ""));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-
-    if (type === "recovery" && accessToken) {
-      // Tenemos los tokens en el hash — establecer la sesión manualmente
-      // en lugar de depender de que Supabase la procese antes de que React monte.
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken ?? "",
-      }).then(({ error: sessionError }) => {
-        if (sessionError) {
-          setChecking(false);
-          return;
-        }
+    // El middleware ya permite pasar a esta página con sesión activa.
+    // Supabase habrá procesado el token del hash antes de que React monte,
+    // así que simplemente verificamos si hay sesión en curso.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
         setValidSession(true);
-        setChecking(false);
-      });
-      return; // no registrar onAuthStateChange ni timeout en este caso
-    }
+      }
+      setChecking(false);
+    });
 
-    // Sin hash de recovery: escuchar onAuthStateChange por si el cliente de
-    // Supabase ya procesó el token antes de que montara el componente.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    // Fallback: escuchar por si el evento llega después de getSession
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session?.user)) {
         setValidSession(true);
         setChecking(false);
       }
     });
 
-    // Timeout final: si en 3 s no llegó ninguna señal, mostrar error.
-    const timeout = setTimeout(() => {
-      setChecking(false);
-    }, 3000);
+    const timeout = setTimeout(() => setChecking(false), 3000);
 
     return () => {
       subscription.unsubscribe();
@@ -106,10 +87,11 @@ export default function ResetPasswordPage() {
     setError("");
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (updateError) { setError(updateError.message); return; }
+    if (updateError) { setError(updateError.message); setLoading(false); return; }
+    // Cerrar la sesión de recovery para que el usuario inicie sesión limpiamente
+    await supabase.auth.signOut();
     setDone(true);
-    setTimeout(() => router.push("/"), 2000);
+    setTimeout(() => router.push("/auth/login"), 2000);
   }
 
   // Indicador de coincidencia de contraseñas
@@ -213,7 +195,7 @@ export default function ResetPasswordPage() {
                 ✓ Contraseña actualizada correctamente
               </p>
               <p className="text-xs" style={{ color: textMuted }}>
-                Redirigiendo…
+                Redirigiendo al inicio de sesión…
               </p>
             </div>
           )}
