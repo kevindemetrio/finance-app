@@ -117,7 +117,20 @@ export async function loadMonth(year: number, month: number): Promise<MonthData>
   return result;
 }
 
+function sanitizeText(value: string, maxLength: number): string {
+  // Eliminar caracteres de control (excepto tabulación y nueva línea) y recortar
+  return value.trim().slice(0, maxLength).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+}
+
 export async function saveEntry(entry: Entry, type: "income"|"fixed"|"variable"|"saving", year: number, month: number): Promise<void> {
+  if (!entry.name?.trim()) throw new Error("Nombre requerido");
+  if (entry.amount <= 0 || entry.amount > 999_999_999) throw new Error("Importe inválido");
+  if (year < 2000 || year > 2100) throw new Error("Año inválido");
+  if (month < 0 || month > 11) throw new Error("Mes inválido");
+
+  entry.name = sanitizeText(entry.name, 200);
+  if (entry.notes) entry.notes = sanitizeText(entry.notes, 500);
+
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -279,17 +292,27 @@ export async function loadGoals(): Promise<Goal[]> {
 }
 
 export async function createGoal(name: string, targetAmount: number, deadline?: string, color?: string): Promise<void> {
+  if (!name?.trim()) throw new Error("Nombre requerido");
+  if (targetAmount <= 0 || targetAmount > 999_999_999) throw new Error("Importe inválido");
+  const cleanName = sanitizeText(name, 200);
+
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("goals").insert({ user_id: user.id, name, target_amount: targetAmount, saved_amount: 0, deadline: deadline || null, color: color || "#1D9E75" });
+  await supabase.from("goals").insert({ user_id: user.id, name: cleanName, target_amount: targetAmount, saved_amount: 0, deadline: deadline || null, color: color || "#1D9E75" });
 }
 
 export async function updateGoal(id: string, patch: Partial<{ name: string; targetAmount: number; savedAmount: number; deadline: string; color: string }>): Promise<void> {
   const supabase = createClient();
   const dbPatch: Record<string, unknown> = {};
-  if (patch.name !== undefined)         dbPatch.name = patch.name;
-  if (patch.targetAmount !== undefined) dbPatch.target_amount = patch.targetAmount;
+  if (patch.name !== undefined) {
+    if (!patch.name.trim()) throw new Error("Nombre requerido");
+    dbPatch.name = sanitizeText(patch.name, 200);
+  }
+  if (patch.targetAmount !== undefined) {
+    if (patch.targetAmount <= 0 || patch.targetAmount > 999_999_999) throw new Error("Importe inválido");
+    dbPatch.target_amount = patch.targetAmount;
+  }
   if (patch.savedAmount !== undefined)  dbPatch.saved_amount = patch.savedAmount;
   if (patch.deadline !== undefined)     dbPatch.deadline = patch.deadline || null;
   if (patch.color !== undefined)        dbPatch.color = patch.color;

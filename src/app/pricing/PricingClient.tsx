@@ -6,6 +6,7 @@ import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { toast } from "../components/Toast";
 import { usePlan } from "../hooks/usePlan";
+import { createClient } from "../lib/supabase/client";
 
 interface Prices {
   basicMonthly: string;
@@ -53,6 +54,13 @@ export default function PricingClient({ prices }: Props) {
   }
 
   async function handleCheckout(priceId: string) {
+    // Usuarios no autenticados → redirigir a registro
+    const { data: { user } } = await createClient().auth.getUser();
+    if (!user) {
+      router.push("/auth/signup");
+      return;
+    }
+
     setLoadingPlan(priceId);
     try {
       const res = await fetch("/api/stripe/checkout", {

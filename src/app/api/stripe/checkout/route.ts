@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/app/lib/stripe";
 import { createClient } from "@/app/lib/supabase/server";
+import { checkRateLimit, getClientIp } from "@/app/lib/rateLimit";
 
 const VALID_PRICE_IDS = new Set([
   process.env.STRIPE_PRICE_BASIC_MONTHLY,
@@ -11,7 +12,28 @@ const VALID_PRICE_IDS = new Set([
   process.env.STRIPE_PRICE_FAMILY_ANNUAL,
 ]);
 
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL,
+  "http://localhost:3000",
+].filter(Boolean) as string[];
+
 export async function POST(request: NextRequest) {
+  // ── CSRF: verificar Origin ──────────────────────────────────────────────────
+  const origin = request.headers.get("origin");
+  if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // ── Rate limiting: 10 req / 60 s por IP ────────────────────────────────────
+  const ip = getClientIp(request);
+  if (!checkRateLimit(ip, 10, 60_000)) {
+    return NextResponse.json(
+      { error: "Demasiadas peticiones. Espera un momento." },
+      { status: 429 }
+    );
+  }
+
+  // ── Autenticación: user_id siempre de la sesión, nunca del body ────────────
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
