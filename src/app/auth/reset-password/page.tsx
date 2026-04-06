@@ -54,31 +54,44 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Detección rápida vía hash de la URL — Supabase puede borrarlo antes
-    // de que onAuthStateChange dispare, así que se comprueba de forma síncrona.
+    // Capturar el hash INMEDIATAMENTE antes de que Next.js lo limpie.
+    // URLSearchParams maneja la cadena después del # directamente.
     const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setValidSession(true);
-      setChecking(false);
+    const params = new URLSearchParams(hash.replace("#", ""));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (type === "recovery" && accessToken) {
+      // Tenemos los tokens en el hash — establecer la sesión manualmente
+      // en lugar de depender de que Supabase la procese antes de que React monte.
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? "",
+      }).then(({ error: sessionError }) => {
+        if (sessionError) {
+          setChecking(false);
+          return;
+        }
+        setValidSession(true);
+        setChecking(false);
+      });
+      return; // no registrar onAuthStateChange ni timeout en este caso
     }
 
-    // Escuchar el evento PASSWORD_RECOVERY que Supabase emite al procesar
-    // el token del hash. Es la señal más fiable.
-    // SIGNED_IN sin PASSWORD_RECOVERY previo indica sesión normal, no recovery.
+    // Sin hash de recovery: escuchar onAuthStateChange por si el cliente de
+    // Supabase ya procesó el token antes de que montara el componente.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         setValidSession(true);
         setChecking(false);
       }
-      // SIGNED_IN solo: no hacer nada, dejar que expire el timeout
     });
 
-    // Fallback: si en 4 s no llegó ninguna señal válida, mostrar error.
-    // El middleware ya no redirigirá esta ruta aunque haya sesión activa,
-    // así que no hace falta signOut aquí.
+    // Timeout final: si en 3 s no llegó ninguna señal, mostrar error.
     const timeout = setTimeout(() => {
       setChecking(false);
-    }, 4000);
+    }, 3000);
 
     return () => {
       subscription.unsubscribe();
