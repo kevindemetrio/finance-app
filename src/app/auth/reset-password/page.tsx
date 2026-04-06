@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { useTheme } from "../../components/ThemeProvider";
@@ -42,11 +42,6 @@ export default function ResetPasswordPage() {
   const [validSession, setValidSession] = useState(false);
   const [checking, setChecking]         = useState(true);
 
-  // Ref para evitar el problema de stale closure dentro del timeout:
-  // el estado validSession siempre sería false en el callback del setTimeout
-  // porque se cierra sobre el valor inicial. El ref se actualiza en tiempo real.
-  const validRef = useRef(false);
-
   const accentColor = "#1D9E75";
   const pageBg      = theme === "light" ? "#FDFBF7" : "#0a0a0a";
   const cardBg      = theme === "light" ? "#FFFFFF" : "rgba(255,255,255,0.07)";
@@ -59,50 +54,31 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Capturar el hash de forma síncrona antes de que Supabase lo borre al
-    // procesar el token. Supabase limpia el hash tras parsearlo.
-    const initialHash = window.location.hash;
-    const hasRecoveryHash =
-      initialHash.includes("access_token") || initialHash.includes("type=recovery");
-
-    function markValid() {
-      validRef.current = true;
+    // Detección rápida vía hash de la URL — Supabase puede borrarlo antes
+    // de que onAuthStateChange dispare, así que se comprueba de forma síncrona.
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
       setValidSession(true);
       setChecking(false);
     }
 
-    // Bug 3 — Verificar sesión inicial: útil cuando onAuthStateChange ya disparó
-    // antes de que el listener se registrase (race condition en hot-reloads / SSR).
-    // Solo aceptar la sesión si el hash de la URL indicaba un recovery token.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!validRef.current && session?.user && hasRecoveryHash) {
-        markValid();
+    // Escuchar el evento PASSWORD_RECOVERY que Supabase emite al procesar
+    // el token del hash. Es la señal más fiable.
+    // SIGNED_IN sin PASSWORD_RECOVERY previo indica sesión normal, no recovery.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setValidSession(true);
+        setChecking(false);
       }
+      // SIGNED_IN solo: no hacer nada, dejar que expire el timeout
     });
 
-    // Bug 2 — Escuchar PASSWORD_RECOVERY y también SIGNED_IN cuando viene
-    // acompañado de sesión y hash de recovery (algunos clientes solo emiten
-    // SIGNED_IN en lugar de PASSWORD_RECOVERY dependiendo de la versión).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (
-        event === "PASSWORD_RECOVERY" ||
-        (event === "SIGNED_IN" && session?.user && hasRecoveryHash)
-      ) {
-        markValid();
-      }
-    });
-
-    // Bug 1 + Bug 2 — Timeout aumentado a 5 s. Si expira sin sesión válida Y
-    // había un token de recovery en la URL, hacer signOut para limpiar cualquier
-    // sesión residual que el middleware pudiera usar para redirigir a la app.
-    // Si no había hash de recovery, no tocar la sesión (podría ser un usuario
-    // normal navegando a esta ruta directamente).
-    const timeout = setTimeout(async () => {
-      if (!validRef.current && hasRecoveryHash) {
-        await supabase.auth.signOut();
-      }
+    // Fallback: si en 4 s no llegó ninguna señal válida, mostrar error.
+    // El middleware ya no redirigirá esta ruta aunque haya sesión activa,
+    // así que no hace falta signOut aquí.
+    const timeout = setTimeout(() => {
       setChecking(false);
-    }, 5000);
+    }, 4000);
 
     return () => {
       subscription.unsubscribe();

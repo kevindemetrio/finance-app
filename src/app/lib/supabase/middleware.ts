@@ -28,14 +28,20 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
+  const isResetPassword = request.nextUrl.pathname === "/auth/reset-password";
   const isApiRoute = request.nextUrl.pathname.startsWith("/api/");
+
+  // Sin usuario y no es página de auth ni API → redirigir a login
   if (!user && !isAuthPage && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthPage) {
+  // Con usuario y es página de auth → redirigir a inicio
+  // EXCEPTO /auth/reset-password: la sesión de recovery es necesaria para
+  // que supabase.auth.updateUser() funcione — dejar que la página lo gestione
+  if (user && isAuthPage && !isResetPassword) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
