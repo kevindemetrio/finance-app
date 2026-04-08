@@ -7,7 +7,7 @@ import {
   updateGoal, todayStr, fmtEur,
 } from "../lib/data";
 import { confirm, toast } from "./Toast";
-import { GhostButton, IconButton, SaveButton, TextInput } from "./ui";
+import { GhostButton, SaveButton, TextInput } from "./ui";
 
 const GOAL_COLORS = ["#1D9E75","#378ADD","#BA7517","#E24B4A","#7F77DD","#D85A30"];
 
@@ -44,6 +44,89 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
   const innerRef = useRef<HTMLDivElement>(null);
   const [naturalHeight, setNaturalHeight] = useState(0);
   const [measured, setMeasured] = useState(false);
+
+  // Swipe-to-reveal on header
+  const headerTouchStartX = useRef(0);
+  const headerTouchStartY = useRef(0);
+  const headerSwipeDx = useRef(0);
+  const headerIsSwiping = useRef(false);
+  const headerIsHoriz = useRef<boolean | null>(null);
+  const headerContentRef = useRef<HTMLDivElement>(null);
+  const headerDeleteRef = useRef<HTMLDivElement>(null);
+  const headerEditRef = useRef<HTMLDivElement>(null);
+
+  function applyHeaderSwipe(dx: number) {
+    const clamped = Math.max(-100, Math.min(80, dx));
+    headerSwipeDx.current = clamped;
+    if (headerContentRef.current) {
+      headerContentRef.current.style.transform = `translateX(${clamped}px)`;
+      headerContentRef.current.style.transition = "none";
+    }
+    if (headerDeleteRef.current) {
+      headerDeleteRef.current.style.width = `${Math.max(0, -clamped)}px`;
+      headerDeleteRef.current.style.transition = "none";
+    }
+    if (headerEditRef.current) {
+      headerEditRef.current.style.width = `${Math.max(0, clamped)}px`;
+      headerEditRef.current.style.transition = "none";
+    }
+  }
+
+  function snapHeaderBack() {
+    const SPRING = "0.32s cubic-bezier(0.34,1.56,0.64,1)";
+    const EASE = "0.32s cubic-bezier(0.4,0,0.2,1)";
+    if (headerContentRef.current) {
+      headerContentRef.current.style.transform = "translateX(0px)";
+      headerContentRef.current.style.transition = `transform ${SPRING}`;
+    }
+    if (headerDeleteRef.current) {
+      headerDeleteRef.current.style.width = "0px";
+      headerDeleteRef.current.style.transition = `width ${EASE}`;
+    }
+    if (headerEditRef.current) {
+      headerEditRef.current.style.width = "0px";
+      headerEditRef.current.style.transition = `width ${EASE}`;
+    }
+  }
+
+  function onHeaderTouchStart(e: React.TouchEvent) {
+    if (readOnly) return;
+    headerTouchStartX.current = e.touches[0].clientX;
+    headerTouchStartY.current = e.touches[0].clientY;
+    headerIsHoriz.current = null;
+    headerIsSwiping.current = true;
+    headerSwipeDx.current = 0;
+  }
+
+  function onHeaderTouchMove(e: React.TouchEvent) {
+    if (!headerIsSwiping.current) return;
+    const dx = e.touches[0].clientX - headerTouchStartX.current;
+    const dy = e.touches[0].clientY - headerTouchStartY.current;
+    if (headerIsHoriz.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      headerIsHoriz.current = Math.abs(dx) > Math.abs(dy);
+    }
+    if (headerIsHoriz.current === false) {
+      headerIsSwiping.current = false;
+      snapHeaderBack();
+      return;
+    }
+    if (headerIsHoriz.current) {
+      e.preventDefault();
+      applyHeaderSwipe(dx);
+    }
+  }
+
+  function onHeaderTouchEnd() {
+    if (!headerIsSwiping.current) return;
+    headerIsSwiping.current = false;
+    const dx = headerSwipeDx.current;
+    snapHeaderBack();
+    if (dx < -60) {
+      onDelete(goal.id);
+    } else if (dx > 60) {
+      openEdit();
+    }
+  }
 
   // Batch localStorage load + ResizeObserver in one effect
   useEffect(() => {
@@ -149,28 +232,56 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
       <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 pt-3.5 pb-3">
+      <div className="relative overflow-hidden">
+        {/* Delete reveal */}
+        <div ref={headerDeleteRef} className="absolute inset-y-0 right-0 bg-red-500 flex items-center justify-center overflow-hidden z-10" style={{ width: "0px" }}>
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <XSmIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Eliminar</span>
+          </div>
+        </div>
+        {/* Edit reveal */}
+        <div ref={headerEditRef} className="absolute inset-y-0 left-0 bg-brand-blue flex items-center justify-center overflow-hidden z-10" style={{ width: "0px" }}>
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <PencilIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Editar</span>
+          </div>
+        </div>
+        <div
+          ref={headerContentRef}
+          className="flex items-center gap-2 px-4 pt-3.5 pb-3 relative z-20 bg-white dark:bg-neutral-900"
+          style={{ touchAction: "pan-y" }}
+          onTouchStart={onHeaderTouchStart}
+          onTouchMove={onHeaderTouchMove}
+          onTouchEnd={onHeaderTouchEnd}
+        >
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
         <span className="text-sm font-semibold truncate flex-1">{goal.name}</span>
         <span className="text-sm font-bold shrink-0 tabular-nums" style={{ color }}>
           {fmtEur(goal.savedAmount)}
         </span>
-        <IconButton
+        <button
           onClick={openEdit}
           title={readOnly ? "No disponible" : "Editar meta"}
-          className={readOnly ? "opacity-40 cursor-not-allowed" : undefined}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+            text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+            hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90
+            ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
         >
           <PencilIcon />
-        </IconButton>
-        <IconButton
-          danger
+        </button>
+        <button
           onClick={handleDelete}
           title={readOnly ? "No disponible" : "Eliminar meta"}
-          className={readOnly ? "opacity-40 cursor-not-allowed" : undefined}
+          className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+            text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+            hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90
+            ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
         >
           <XIcon />
-        </IconButton>
-      </div>
+        </button>
+        </div>{/* end headerContentRef */}
+      </div>{/* end swipe container */}
 
       {/* ── Progress — always visible ───────────────────────────────────── */}
       <div className="px-4 pb-3">
@@ -321,9 +432,14 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
                         +{fmtEur(c.amount)}
                       </span>
                       {!readOnly && (
-                        <IconButton danger onClick={() => handleDeleteContrib(c)}>
+                        <button
+                          onClick={() => handleDeleteContrib(c)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+                            text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+                            hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90 opacity-0 group-hover:opacity-100"
+                        >
                           <XSmIcon />
-                        </IconButton>
+                        </button>
                       )}
                     </div>
                   ))}

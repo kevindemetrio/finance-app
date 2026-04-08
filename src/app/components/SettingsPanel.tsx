@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   SectionKey, SectionPrefs, UserSettings, SECTION_LABELS, SECTION_AVAILABLE_FIELDS,
@@ -229,61 +229,38 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
                   const onCount = fieldLabels.filter(f => settings.sectionPrefs[key][f.key]).length;
                   const isOpen = activeSection === key;
                   return (
-                    <div key={key} className="rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700/50">
-                      <button
-                        onClick={() => setActiveSection(isOpen ? null : key)}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium
-                          transition-colors
-                          ${isOpen
-                            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
-                            : "bg-white dark:bg-neutral-800/30 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
-                          }`}
-                      >
-                        <span>{SECTION_LABELS[key]}</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                            ${isOpen
-                              ? "bg-brand-blue text-white"
-                              : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"
-                            }`}>
-                            {onCount}/{fieldLabels.length}
-                          </span>
-                          <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
-                        </div>
-                      </button>
-
-                      {isOpen && (
-                        <div className="border-t border-neutral-100 dark:border-neutral-700/50">
-                          {fieldLabels.map(({ key: field, label }, fi) => {
-                            const on = settings.sectionPrefs[key][field];
-                            return (
-                              <button
-                                key={field}
-                                onClick={() => toggleField(key, field)}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors text-left
-                                  ${fi < fieldLabels.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/40" : ""}
-                                  hover:bg-neutral-50 dark:hover:bg-neutral-800/40`}
-                              >
-                                {/* Toggle pill */}
-                                <div className={`relative w-9 h-[20px] rounded-full transition-all shrink-0
-                                  ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}>
-                                  <div className={`absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all
-                                    ${on ? "left-[20px]" : "left-[3px]"}`} />
-                                </div>
-                                <span className={`transition-colors ${on
-                                  ? "text-neutral-800 dark:text-neutral-200 font-medium"
-                                  : "text-neutral-400 dark:text-neutral-600"}`}>
-                                  {label}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <FieldGroup
+                      key={key}
+                      label={SECTION_LABELS[key]}
+                      isOpen={isOpen}
+                      onCount={onCount}
+                      total={fieldLabels.length}
+                      onToggle={() => setActiveSection(isOpen ? null : key)}
+                    >
+                      {fieldLabels.map(({ key: field, label }, fi) => {
+                        const on = settings.sectionPrefs[key][field];
+                        return (
+                          <button
+                            key={field}
+                            onClick={() => toggleField(key, field)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors text-left
+                              ${fi < fieldLabels.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/40" : ""}
+                              hover:bg-neutral-50 dark:hover:bg-neutral-800/40`}
+                          >
+                            <div className={`relative w-9 h-[20px] rounded-full transition-all shrink-0
+                              ${on ? "bg-brand-blue" : "bg-neutral-200 dark:bg-neutral-700"}`}>
+                              <div className={`absolute top-[3px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all
+                                ${on ? "left-[20px]" : "left-[3px]"}`} />
+                            </div>
+                            <span className={`transition-colors ${on
+                              ? "text-neutral-800 dark:text-neutral-200 font-medium"
+                              : "text-neutral-400 dark:text-neutral-600"}`}>
+                              {label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </FieldGroup>
                   );
                 })}
               </div>
@@ -292,6 +269,76 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
         )}
       </div>
     </>
+  );
+}
+
+// ── FieldGroup — animated collapsible section ─────────────────────────────────
+
+function FieldGroup({ label, isOpen, onCount, total, onToggle, children }: {
+  label: string;
+  isOpen: boolean;
+  onCount: number;
+  total: number;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  const [measured, setMeasured] = useState(false);
+
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    setHeight(el.scrollHeight);
+    setMeasured(true);
+    const ro = new ResizeObserver(() => setHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-measure when children change (toggles affect height)
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (el) setHeight(el.scrollHeight);
+  });
+
+  const collapseH = measured ? (isOpen ? height + "px" : "0px") : (isOpen ? "auto" : "0px");
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-700/50">
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium transition-colors
+          ${isOpen
+            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+            : "bg-white dark:bg-neutral-800/30 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+          }`}
+      >
+        <span>{label}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full
+            ${isOpen ? "bg-brand-blue text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400"}`}>
+            {onCount}/{total}
+          </span>
+          <svg className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
+      <div
+        style={{
+          height: collapseH,
+          overflow: "hidden",
+          transition: "height 0.25s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <div ref={innerRef} className="border-t border-neutral-100 dark:border-neutral-700/50">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 

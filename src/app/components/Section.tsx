@@ -144,23 +144,11 @@ export function Section({
         >
           <div ref={innerRef}>
             {headerAfter}
-            <div className={`flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap
-              ${!bodyHeader ? "justify-center" : ""}`}>
-              <button
-                onClick={() => { if (!disabled) setShowModal(true); }}
-                className={`flex items-center gap-2 font-semibold rounded-xl transition-all active:scale-95
-                  ${disabled ? "opacity-40 cursor-not-allowed" : ""}
-                  ${!bodyHeader
-                    ? "text-sm px-5 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-80 shadow-sm"
-                    : `text-sm px-3 py-1.5 ${!accentHex ? "text-brand-blue bg-brand-blue-light dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-950" : ""}`
-                  }`}
-                style={bodyHeader && accentHex ? { color: accentHex, background: `${accentHex}18` } : undefined}
-              >
-                <PlusIcon size={!bodyHeader ? 14 : 13} />
-                Añadir
-              </button>
-              {bodyHeader}
-            </div>
+            {bodyHeader && (
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
+                {bodyHeader}
+              </div>
+            )}
 
             {entries.length === 0 ? (
               <div className="px-4 py-10 text-center flex flex-col items-center gap-3 bg-neutral-50/40 dark:bg-neutral-800/10">
@@ -203,6 +191,27 @@ export function Section({
             )}
           </div>
         </div>
+
+        {/* Full-width add button — always visible footer */}
+        <button
+          onClick={() => { if (!disabled) setShowModal(true); }}
+          disabled={disabled}
+          className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold
+            border-t transition-all active:scale-[0.99] rounded-b-xl
+            ${disabled ? "opacity-40 cursor-not-allowed" : "hover:opacity-80"}`}
+          style={accentHex ? {
+            background: `${accentHex}12`,
+            color: accentHex,
+            borderColor: `${accentHex}28`,
+          } : {
+            background: "rgba(0,0,0,0.03)",
+            color: "#6b7280",
+            borderColor: "rgba(0,0,0,0.08)",
+          }}
+        >
+          <PlusIcon size={13} />
+          Añadir {title.toLowerCase()}
+        </button>
       </div>
     </>
   );

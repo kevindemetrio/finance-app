@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { useTheme } from "../../components/ThemeProvider";
+import { GoogleAuthButton } from "../../components/GoogleAuthButton";
 import Link from "next/link";
 
 const COINS = [
@@ -152,6 +153,16 @@ export default function SignupPage() {
               <span style={{ color: textPrimary }}>spen</span><span style={{ color: accentColor }}>fly</span>
             </h1>
             <p className="text-sm mt-1" style={{ color: textMuted }}>Crea tu cuenta gratis</p>
+          </div>
+
+          {/* Google OAuth */}
+          <div className="mb-5">
+            <GoogleAuthButton mode="signup" inputBg={inputBg} inputBorder={inputBorder} textPrimary={textPrimary} />
+            <div className="flex items-center gap-3 mt-4">
+              <div className="flex-1 h-px" style={{ background: inputBorder }} />
+              <span className="text-xs" style={{ color: textMuted }}>o con email</span>
+              <div className="flex-1 h-px" style={{ background: inputBorder }} />
+            </div>
           </div>
 
           {/* Form */}

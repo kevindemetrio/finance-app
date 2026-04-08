@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { useTheme } from "../../components/ThemeProvider";
+import { GoogleAuthButton } from "../../components/GoogleAuthButton";
 import Link from "next/link";
 
 const BILLS = [
@@ -92,6 +93,7 @@ function LoginInner() {
   const { theme } = useTheme();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
+  const oauthError = searchParams.get("error") === "oauth";
 
   const [email, setEmail]               = useState("");
   const [password, setPassword]         = useState("");
@@ -167,6 +169,16 @@ function LoginInner() {
             <span>Cuenta creada correctamente. Ya puedes iniciar sesión.</span>
           </div>
         )}
+        {oauthError && (
+          <div className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl border
+            bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800
+            text-red-700 dark:text-red-300 text-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 mt-0.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Error al iniciar sesión con Google. Inténtalo de nuevo.</span>
+          </div>
+        )}
 
         <div className="rounded-2xl p-8 border transition-all" style={{ background: cardBg, borderColor: cardBorder, backdropFilter: "blur(12px)" }}>
 
@@ -184,6 +196,16 @@ function LoginInner() {
               <span style={{ color: textPrimary }}>spen</span><span style={{ color: accentColor }}>fly</span>
             </h1>
             <p className="text-sm mt-1" style={{ color: textMuted }}>Tu dinero, bajo control</p>
+          </div>
+
+          {/* Google OAuth */}
+          <div className="mb-5">
+            <GoogleAuthButton mode="login" inputBg={inputBg} inputBorder={inputBorder} textPrimary={textPrimary} />
+            <div className="flex items-center gap-3 mt-4">
+              <div className="flex-1 h-px" style={{ background: inputBorder }} />
+              <span className="text-xs" style={{ color: textMuted }}>o con email</span>
+              <div className="flex-1 h-px" style={{ background: inputBorder }} />
+            </div>
           </div>
 
           {/* Form */}

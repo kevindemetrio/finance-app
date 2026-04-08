@@ -1,14 +1,152 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Contribution, Investment, InvestmentCategory, INVESTMENT_CATEGORIES, CATEGORY_COLORS, CATEGORY_LABELS,
   totalContributions, addContribution, deleteContribution,
   updateContribution, deleteInvestment, updateInvestment,
 } from "../../lib/investments";
 import { fmtEur, fmtDate, todayStr } from "../../lib/data";
-import { IconButton, SaveButton, GhostButton, TextInput } from "../ui";
+import { SaveButton, GhostButton, TextInput } from "../ui";
 import { toast, confirm as confirmDialog } from "../Toast";
+
+interface ContribRowProps {
+  c: Contribution;
+  colorText: string;
+  isEditing: boolean;
+  editAmount: string;
+  editDate: string;
+  editNotes: string;
+  onEditAmountChange: (v: string) => void;
+  onEditDateChange: (v: string) => void;
+  onEditNotesChange: (v: string) => void;
+  onOpenEdit: () => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+}
+
+function ContribRow({
+  c, colorText, isEditing,
+  editAmount, editDate, editNotes,
+  onEditAmountChange, onEditDateChange, onEditNotesChange,
+  onOpenEdit, onSaveEdit, onCancelEdit, onDelete,
+}: ContribRowProps) {
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const dx = useRef(0);
+  const isSwiping = useRef(false);
+  const isHoriz = useRef<boolean | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const delRef = useRef<HTMLDivElement>(null);
+  const editRef = useRef<HTMLDivElement>(null);
+
+  function apply(d: number) {
+    const cl = Math.max(-90, Math.min(70, d));
+    dx.current = cl;
+    if (rowRef.current) { rowRef.current.style.transform = `translateX(${cl}px)`; rowRef.current.style.transition = "none"; }
+    if (delRef.current) { delRef.current.style.width = `${Math.max(0, -cl)}px`; delRef.current.style.transition = "none"; }
+    if (editRef.current) { editRef.current.style.width = `${Math.max(0, cl)}px`; editRef.current.style.transition = "none"; }
+  }
+
+  function snap() {
+    const S = "0.32s cubic-bezier(0.34,1.56,0.64,1)";
+    const E = "0.32s cubic-bezier(0.4,0,0.2,1)";
+    if (rowRef.current) { rowRef.current.style.transform = "translateX(0px)"; rowRef.current.style.transition = `transform ${S}`; }
+    if (delRef.current) { delRef.current.style.width = "0px"; delRef.current.style.transition = `width ${E}`; }
+    if (editRef.current) { editRef.current.style.width = "0px"; editRef.current.style.transition = `width ${E}`; }
+  }
+
+  function onTS(e: React.TouchEvent) {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    isHoriz.current = null;
+    isSwiping.current = true;
+    dx.current = 0;
+  }
+
+  function onTM(e: React.TouchEvent) {
+    if (!isSwiping.current) return;
+    const ddx = e.touches[0].clientX - startX.current;
+    const ddy = e.touches[0].clientY - startY.current;
+    if (isHoriz.current === null && (Math.abs(ddx) > 5 || Math.abs(ddy) > 5)) {
+      isHoriz.current = Math.abs(ddx) > Math.abs(ddy);
+    }
+    if (isHoriz.current === false) { isSwiping.current = false; snap(); return; }
+    if (isHoriz.current) { e.preventDefault(); apply(ddx); }
+  }
+
+  function onTE() {
+    if (!isSwiping.current) return;
+    isSwiping.current = false;
+    const d = dx.current;
+    snap();
+    if (d < -60) onDelete();
+    else if (d > 60) onOpenEdit();
+  }
+
+  return (
+    <div>
+      <div className="relative overflow-hidden border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+        <div ref={delRef} className="absolute inset-y-0 right-0 bg-red-500 flex items-center justify-center overflow-hidden z-10" style={{ width: "0px" }}>
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <XIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Eliminar</span>
+          </div>
+        </div>
+        <div ref={editRef} className="absolute inset-y-0 left-0 bg-brand-blue flex items-center justify-center overflow-hidden z-10" style={{ width: "0px" }}>
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <PencilIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Editar</span>
+          </div>
+        </div>
+        <div
+          ref={rowRef}
+          className="flex items-center gap-2 px-4 py-2.5 relative z-20 bg-white dark:bg-neutral-900"
+          style={{ touchAction: "pan-y" }}
+          onTouchStart={onTS}
+          onTouchMove={onTM}
+          onTouchEnd={onTE}
+        >
+          <div className="flex-1 min-w-0">
+            {c.notes && <p className="text-sm text-neutral-700 dark:text-neutral-300 truncate">{c.notes}</p>}
+          </div>
+          <span className="text-[12px] text-neutral-400 shrink-0">{fmtDate(c.date)}</span>
+          <span className={`text-sm font-medium shrink-0 ${colorText}`}>
+            {c.amount >= 0 ? "+" : ""}{fmtEur(c.amount)}
+          </span>
+          <button
+            onClick={onOpenEdit}
+            title="Editar aportación"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+              hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90"
+          >
+            <PencilIcon />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Eliminar aportación"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+              hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90"
+          >
+            <XIcon />
+          </button>
+        </div>
+      </div>
+      {isEditing && (
+        <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
+          <TextInput type="number" value={editAmount} onChange={e => onEditAmountChange(e.target.value)} placeholder="Importe €" step="0.01" className="w-28" />
+          <TextInput type="date" value={editDate} onChange={e => onEditDateChange(e.target.value)} className="w-36" />
+          <TextInput value={editNotes} onChange={e => onEditNotesChange(e.target.value)} placeholder="Nota (opcional)" className="flex-1 min-w-[120px]" />
+          <SaveButton onClick={onSaveEdit} />
+          <GhostButton onClick={onCancelEdit}>✕</GhostButton>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   investment: Investment;
@@ -105,12 +243,24 @@ export function InvestmentCard({ investment, onChange }: Props) {
 
         <div className="flex items-center gap-2 shrink-0">
           <span className={`text-sm font-medium ${colors.text}`}>{fmtEur(total)}</span>
-          <IconButton onClick={() => { setEditingInv(e => !e); setOpen(true); }}>
+          <button
+            onClick={() => { setEditingInv(e => !e); setOpen(true); }}
+            title="Editar inversión"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+              hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90"
+          >
             <PencilIcon />
-          </IconButton>
-          <IconButton danger onClick={handleDelete}>
+          </button>
+          <button
+            onClick={handleDelete}
+            title="Eliminar inversión"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+              hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90"
+          >
             <XIcon />
-          </IconButton>
+          </button>
         </div>
       </div>
 
@@ -166,28 +316,22 @@ export function InvestmentCard({ investment, onChange }: Props) {
             </p>
           ) : (
             sorted.map((c) => (
-              <div key={c.id}>
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                  <div className="flex-1 min-w-0">
-                    {c.notes && <p className="text-sm text-neutral-700 dark:text-neutral-300 truncate">{c.notes}</p>}
-                  </div>
-                  <span className="text-[12px] text-neutral-400 shrink-0">{fmtDate(c.date)}</span>
-                  <span className={`text-sm font-medium shrink-0 ${c.amount >= 0 ? colors.text : "text-brand-red"}`}>
-                    {c.amount >= 0 ? "+" : ""}{fmtEur(c.amount)}
-                  </span>
-                  <IconButton onClick={() => openEditContrib(c)}><PencilIcon /></IconButton>
-                  <IconButton danger onClick={() => handleDeleteContrib(c.id)}><XIcon /></IconButton>
-                </div>
-                {editingContrib === c.id && (
-                  <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
-                    <TextInput type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)} placeholder="Importe €" step="0.01" className="w-28" />
-                    <TextInput type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="w-36" />
-                    <TextInput value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Nota (opcional)" className="flex-1 min-w-[120px]" />
-                    <SaveButton onClick={() => handleSaveContrib(c)} />
-                    <GhostButton onClick={() => setEditingContrib(null)}>✕</GhostButton>
-                  </div>
-                )}
-              </div>
+              <ContribRow
+                key={c.id}
+                c={c}
+                colorText={c.amount >= 0 ? colors.text : "text-brand-red"}
+                isEditing={editingContrib === c.id}
+                editAmount={editAmount}
+                editDate={editDate}
+                editNotes={editNotes}
+                onEditAmountChange={setEditAmount}
+                onEditDateChange={setEditDate}
+                onEditNotesChange={setEditNotes}
+                onOpenEdit={() => openEditContrib(c)}
+                onSaveEdit={() => handleSaveContrib(c)}
+                onCancelEdit={() => setEditingContrib(null)}
+                onDelete={() => handleDeleteContrib(c.id)}
+              />
             ))
           )}
         </>

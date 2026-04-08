@@ -6,6 +6,7 @@ import { ToastProvider } from "./components/Toast";
 import { CategoriesProvider } from "./components/CategoriesProvider";
 import { TrialBanner } from "./components/TrialBanner";
 import { SWRProvider } from "./components/SWRProvider";
+import { NavProgressBar } from "./components/NavProgressBar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
 
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SWRProvider>
           <ThemeProvider>
             <CategoriesProvider>
+              <NavProgressBar />
               <ToastProvider />
               <TrialBanner />
               {children}

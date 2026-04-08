@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Category, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
-import { Badge, GhostButton, IconButton, SaveButton, TextInput } from "./ui";
+import { Badge, GhostButton, SaveButton, TextInput } from "./ui";
 import { toast } from "./Toast";
 import { useCategories } from "./CategoriesProvider";
 
@@ -237,9 +237,25 @@ export function EntryRow({
             {displaySign}{fmtEur(displayAmount)}
           </span>
           {!readOnly && (
-            <div className="flex items-center pt-0.5">
-              <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-              <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
+            <div className="flex items-center gap-1 pt-0.5">
+              <button
+                onClick={() => setEditing(!editing)}
+                title="Editar"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+                  text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+                  hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90"
+              >
+                <PencilIcon />
+              </button>
+              <button
+                onClick={onDelete}
+                title="Eliminar"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+                  text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+                  hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90"
+              >
+                <XIcon />
+              </button>
             </div>
           )}
         </div>
