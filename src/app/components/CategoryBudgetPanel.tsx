@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Category, CategoryBudget, Entry, fmtEur, saveCategoryBudget, saveMonthConfig } from "../lib/data";
 import { GhostButton, SaveButton, TextInput } from "./ui";
 import { useTheme, SEASON_CONFIG } from "./ThemeProvider";
@@ -53,12 +53,27 @@ export function CategoryBudgetPanel({
   const [editVal, setEditVal]       = useState("");
   const [pendingCat, setPendingCat] = useState<Category | null>(null);
 
+  // Animated collapse
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  const [measured, setMeasured]  = useState(false);
+
   const { categories } = useCategories();
   const { theme, season } = useTheme();
   const cfg = theme === "season" ? SEASON_CONFIG[season] : null;
 
+  // Single effect: load localStorage + ResizeObserver together to avoid spurious animation on mount
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
+
+    const el = innerRef.current;
+    if (!el) return;
+    setNaturalHeight(el.scrollHeight);
+    setMeasured(true);
+    const ro = new ResizeObserver(() => setNaturalHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close any open edit forms if disabled becomes true
@@ -87,7 +102,6 @@ export function CategoryBudgetPanel({
   const globalOver = varBudget > 0 && varTotal > varBudget;
   const globalWarn = varBudget > 0 && globalPct >= 80 && !globalOver;
 
-  // Categories with spending or a set budget
   const activeCats = categories.filter(
     c => spending[c] > 0 || budgets.find(b => b.category === c)
   );
@@ -122,6 +136,10 @@ export function CategoryBudgetPanel({
 
   const definedCount = budgets.length + (varBudget > 0 ? 1 : 0);
 
+  const collapseHeight = measured
+    ? open ? naturalHeight + "px" : "0px"
+    : open ? "auto" : "0px";
+
   return (
     <div className="card mb-4 mt-4" data-tour="budget-panel" style={cfg ? { background: cfg.cardBg, borderColor: cfg.cardBorder } : undefined}>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -150,8 +168,15 @@ export function CategoryBudgetPanel({
         </svg>
       </button>
 
-      {open && (
-        <>
+      {/* Animated collapse wrapper */}
+      <div
+        style={{
+          height: collapseHeight,
+          overflow: "hidden",
+          transition: "height 0.3s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <div ref={innerRef}>
           {/* ── Global monthly budget ──────────────────────────────────────── */}
           <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
             <div className="flex items-center justify-between mb-2">
@@ -210,29 +235,21 @@ export function CategoryBudgetPanel({
                 ? [...activeCats, pendingCat]
                 : activeCats
               ).map(cat => {
-                const spent  = spending[cat] || 0;
+                const spent       = spending[cat] || 0;
                 const budgetEntry = budgets.find(b => b.category === cat);
-                const budget = budgetEntry?.budget || 0;
-                const pct    = budget > 0 ? Math.round((spent / budget) * 100) : 0;
-                const over   = budget > 0 && spent > budget;
-                const warn   = budget > 0 && pct >= 80 && !over;
-                const catColor = CAT_COLORS[cat] || { dot: "#A8A49E", text: "#7A7770" };
-                const isEd   = editingCat === cat;
+                const budget      = budgetEntry?.budget || 0;
+                const pct         = budget > 0 ? Math.round((spent / budget) * 100) : 0;
+                const over        = budget > 0 && spent > budget;
+                const warn        = budget > 0 && pct >= 80 && !over;
+                const catColor    = CAT_COLORS[cat] || { dot: "#A8A49E", text: "#7A7770" };
+                const isEd        = editingCat === cat;
 
                 return (
                   <div key={cat} className="px-4 py-2.5">
                     {isEd ? (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: catColor.dot }}
-                        />
-                        <span
-                          className="text-xs font-medium flex-1"
-                          style={{ color: catColor.text }}
-                        >
-                          {cat}
-                        </span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: catColor.dot }} />
+                        <span className="text-xs font-medium flex-1" style={{ color: catColor.text }}>{cat}</span>
                         <TextInput
                           type="number" value={editVal} onChange={e => setEditVal(e.target.value)}
                           placeholder="Límite €" className="w-28" autoFocus min="0" step="1"
@@ -244,16 +261,8 @@ export function CategoryBudgetPanel({
                     ) : (
                       <>
                         <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: catColor.dot }}
-                          />
-                          <span
-                            className="text-xs font-medium flex-1"
-                            style={{ color: catColor.text }}
-                          >
-                            {cat}
-                          </span>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: catColor.dot }} />
+                          <span className="text-xs font-medium flex-1" style={{ color: catColor.text }}>{cat}</span>
                           <span className="text-xs text-neutral-500 dark:text-neutral-400">
                             {fmtEur(spent)}
                             {budget > 0 && <span className="text-neutral-400 dark:text-neutral-600"> / {fmtEur(budget)}</span>}
@@ -315,8 +324,8 @@ export function CategoryBudgetPanel({
               </select>
             </div>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { useTheme } from "../../components/ThemeProvider";
 import Link from "next/link";
@@ -86,6 +87,7 @@ function ThemeToggleAuth() {
 }
 
 export default function SignupPage() {
+  const router = useRouter();
   const { theme } = useTheme();
 
   const [email, setEmail]       = useState("");
@@ -93,7 +95,6 @@ export default function SignupPage() {
   const [confirm, setConfirm]   = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
-  const [done, setDone]         = useState(false);
 
   const accentColor = "#1D9E75";
   const pageBg      = theme === "light" ? "#FDFBF7" : "#0a0a0a";
@@ -113,31 +114,15 @@ export default function SignupPage() {
     if (password !== confirm) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) { setError(error.message); setLoading(false); }
-    else { setDone(true); }
-  }
-
-  if (done) {
-    return (
-      <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden transition-colors duration-500"
-        style={{ background: pageBg }}>
-        {theme === "dark" && <CoinRain />}
-        <div className="relative z-10 w-full max-w-sm text-center">
-          <div className="rounded-2xl p-8 border" style={{ background: cardBg, borderColor: cardBorder, backdropFilter: "blur(12px)" }}>
-            <div className="text-5xl mb-4">✉️</div>
-            <h2 className="text-lg font-semibold mb-2" style={{ color: textPrimary }}>Revisa tu email</h2>
-            <p className="text-sm mb-6" style={{ color: textMuted }}>
-              Te hemos enviado un enlace de confirmación a{" "}
-              <span style={{ color: accentColor }}>{email}</span>.
-            </p>
-            <Link href="/auth/login" className="text-sm hover:underline" style={{ color: accentColor }}>
-              Volver al login
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+    const { error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+    // Sign out immediately so the middleware doesn't redirect to / before email confirmation
+    await supabase.auth.signOut();
+    router.push("/auth/login?registered=1");
   }
 
   return (

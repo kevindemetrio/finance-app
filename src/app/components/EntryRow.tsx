@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Category, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
 import { Badge, GhostButton, IconButton, SaveButton, TextInput } from "./ui";
 import { toast } from "./Toast";
@@ -45,7 +45,10 @@ export function CategoryBadge({ cat }: { cat: string }) {
   );
 }
 
-export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCategory, showDate = true, showNotes = true, showName = true, readOnly, onUpdate, onDelete }: Props) {
+export function EntryRow({
+  entry, sign, colorClass, accentHex, showPaid, showCategory,
+  showDate = true, showNotes = true, showName = true, readOnly, onUpdate, onDelete,
+}: Props) {
   const { categories } = useCategories();
   const [editing, setEditing]   = useState(false);
   const [name, setName]         = useState(entry.name);
@@ -54,6 +57,100 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
   const [paid, setPaid]         = useState(entry.paid ?? false);
   const [category, setCategory] = useState(entry.category ?? "");
   const [notes, setNotes]       = useState(entry.notes ?? "");
+
+  // ── Swipe-to-reveal (touch only) ──────────────────────────────────────────
+  const touchStartX  = useRef(0);
+  const touchStartY  = useRef(0);
+  const swipeDxRef   = useRef(0);
+  const isSwipingRef = useRef(false);
+  const isHorizRef   = useRef<boolean | null>(null);
+
+  // Refs for direct DOM manipulation — avoids re-renders during drag
+  const rowContentRef   = useRef<HTMLDivElement>(null);
+  const deleteRevealRef = useRef<HTMLDivElement>(null);
+  const editRevealRef   = useRef<HTMLDivElement>(null);
+
+  function applySwipe(dx: number) {
+    const clamped = Math.max(-120, Math.min(80, dx));
+    swipeDxRef.current = clamped;
+    if (rowContentRef.current) {
+      rowContentRef.current.style.transform   = `translateX(${clamped}px)`;
+      rowContentRef.current.style.transition  = "none";
+    }
+    if (deleteRevealRef.current) {
+      deleteRevealRef.current.style.width     = `${Math.max(0, -clamped)}px`;
+      deleteRevealRef.current.style.transition = "none";
+    }
+    if (editRevealRef.current) {
+      editRevealRef.current.style.width       = `${Math.max(0, clamped)}px`;
+      editRevealRef.current.style.transition  = "none";
+    }
+  }
+
+  function snapBack() {
+    const SPRING = "0.32s cubic-bezier(0.34,1.56,0.64,1)";
+    const EASE   = "0.32s cubic-bezier(0.4,0,0.2,1)";
+    if (rowContentRef.current) {
+      rowContentRef.current.style.transform  = "translateX(0px)";
+      rowContentRef.current.style.transition = `transform ${SPRING}`;
+    }
+    if (deleteRevealRef.current) {
+      deleteRevealRef.current.style.width      = "0px";
+      deleteRevealRef.current.style.transition = `width ${EASE}`;
+    }
+    if (editRevealRef.current) {
+      editRevealRef.current.style.width      = "0px";
+      editRevealRef.current.style.transition = `width ${EASE}`;
+    }
+  }
+
+  function onTouchStart(e: React.TouchEvent) {
+    if (editing || readOnly) return;
+    e.stopPropagation(); // prevent carousel from capturing
+    touchStartX.current  = e.touches[0].clientX;
+    touchStartY.current  = e.touches[0].clientY;
+    isHorizRef.current   = null;
+    isSwipingRef.current = true;
+    swipeDxRef.current   = 0;
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (!isSwipingRef.current) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    // Determine swipe direction on first meaningful move
+    if (isHorizRef.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      isHorizRef.current = Math.abs(dx) > Math.abs(dy);
+    }
+
+    // Cancel if mostly vertical (allow scroll)
+    if (isHorizRef.current === false) {
+      isSwipingRef.current = false;
+      snapBack();
+      return;
+    }
+
+    if (isHorizRef.current) {
+      e.stopPropagation();
+      applySwipe(dx);
+    }
+  }
+
+  function onTouchEnd() {
+    if (!isSwipingRef.current) return;
+    isSwipingRef.current = false;
+    const dx = swipeDxRef.current;
+    snapBack();
+
+    if (dx < -80) {
+      // Left swipe → delete
+      onDelete();
+    } else if (dx > 60) {
+      // Right swipe → edit
+      setEditing(true);
+    }
+  }
 
   function handleSave() {
     const a = parseFloat(amount);
@@ -77,39 +174,75 @@ export function EntryRow({ entry, sign, colorClass, accentHex, showPaid, showCat
 
   return (
     <div>
-      <div className="group flex items-start gap-2 px-4 py-3 text-sm
-        border-b border-neutral-100/70 dark:border-neutral-800/50 last:border-0
-        hover:bg-white dark:hover:bg-neutral-800/40 transition-colors">
-        <div className="flex-1 min-w-0 pt-0.5">
-          {showName && <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>}
-          {showNotes && entry.notes && (
-            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-snug mt-0.5 italic">{entry.notes}</p>
+      {/* Swipe container */}
+      <div className="relative overflow-hidden">
+
+        {/* Delete reveal (right side, shown on left-swipe) */}
+        <div
+          ref={deleteRevealRef}
+          className="absolute inset-y-0 right-0 bg-red-500 flex items-center justify-center overflow-hidden z-10"
+          style={{ width: "0px" }}
+        >
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <XIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Eliminar</span>
+          </div>
+        </div>
+
+        {/* Edit reveal (left side, shown on right-swipe) */}
+        <div
+          ref={editRevealRef}
+          className="absolute inset-y-0 left-0 bg-brand-blue flex items-center justify-center overflow-hidden z-10"
+          style={{ width: "0px" }}
+        >
+          <div className="flex flex-col items-center gap-0.5 text-white px-3 pointer-events-none">
+            <PencilIcon />
+            <span className="text-[9px] font-semibold whitespace-nowrap">Editar</span>
+          </div>
+        </div>
+
+        {/* Sliding row content */}
+        <div
+          ref={rowContentRef}
+          className="group flex items-start gap-2 px-4 py-3 text-sm
+            border-b border-neutral-100/70 dark:border-neutral-800/50 last:border-0
+            hover:bg-white dark:hover:bg-neutral-800/40 transition-colors relative z-20 bg-white dark:bg-neutral-900"
+          style={{ touchAction: "pan-y" }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="flex-1 min-w-0 pt-0.5">
+            {showName && <p className="text-neutral-800 dark:text-neutral-200 truncate leading-snug">{entry.name}</p>}
+            {showNotes && entry.notes && (
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate leading-snug mt-0.5 italic">{entry.notes}</p>
+            )}
+          </div>
+          {showDate && (
+            <span className="text-[11px] text-neutral-300 dark:text-neutral-600 shrink-0 tabular-nums pt-0.5">{fmtDate(entry.date)}</span>
+          )}
+          {showCategory && entry.category && <span className="pt-0.5"><CategoryBadge cat={entry.category} /></span>}
+          {showPaid && (
+            <span className="pt-0.5">
+              <Badge
+                variant={entry.paid ? "paid" : "pending"}
+                onClick={readOnly ? undefined : () => onUpdate({ ...entry, paid: !entry.paid })}
+              />
+            </span>
+          )}
+          <span
+            className={`font-semibold text-right w-20 shrink-0 pt-0.5 ${displayColor}`}
+            style={accentHex && entry.amount >= 0 ? { color: accentHex } : undefined}
+          >
+            {displaySign}{fmtEur(displayAmount)}
+          </span>
+          {!readOnly && (
+            <div className="flex items-center pt-0.5">
+              <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
+              <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
+            </div>
           )}
         </div>
-        {showDate && (
-          <span className="text-[11px] text-neutral-300 dark:text-neutral-600 shrink-0 tabular-nums pt-0.5">{fmtDate(entry.date)}</span>
-        )}
-        {showCategory && entry.category && <span className="pt-0.5"><CategoryBadge cat={entry.category} /></span>}
-        {showPaid && (
-          <span className="pt-0.5">
-            <Badge
-              variant={entry.paid ? "paid" : "pending"}
-              onClick={readOnly ? undefined : () => onUpdate({ ...entry, paid: !entry.paid })}
-            />
-          </span>
-        )}
-        <span
-          className={`font-semibold text-right w-20 shrink-0 pt-0.5 ${displayColor}`}
-          style={accentHex && entry.amount >= 0 ? { color: accentHex } : undefined}
-        >
-          {displaySign}{fmtEur(displayAmount)}
-        </span>
-        {!readOnly && (
-          <div className="flex items-center pt-0.5">
-            <IconButton onClick={() => setEditing(!editing)} title="Editar"><PencilIcon /></IconButton>
-            <IconButton danger onClick={onDelete} title="Eliminar"><XIcon /></IconButton>
-          </div>
-        )}
       </div>
 
       {editing && !readOnly && (

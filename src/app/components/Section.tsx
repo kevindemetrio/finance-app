@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Entry, fmtEur } from "../lib/data";
 import { EntryRow } from "./EntryRow";
 import { AddEntryModal } from "./AddEntryModal";
@@ -24,6 +24,10 @@ interface Props {
   bodyHeader?: React.ReactNode;
   storageKey: string;
   tourId?: string;
+  /** Controla si el modal AddEntry muestra el campo "estado de pago". Por defecto true. */
+  formShowPaid?: boolean;
+  /** Controla si el modal AddEntry muestra el selector de categoría. Por defecto true. */
+  formShowCategory?: boolean;
   onAdd: (entry: Entry) => void;
   onUpdate: (idx: number, updated: Entry) => void;
   onDelete: (idx: number) => void;
@@ -32,14 +36,35 @@ interface Props {
 export function Section({
   title, dotColor, totalColor, accentHex, sign, entries, showPaid, defaultPaid, showCategory,
   showDate, showNotes, showName, disabled,
-  emptyMessage, headerAfter, bodyHeader, storageKey, tourId, onAdd, onUpdate, onDelete,
+  emptyMessage, headerAfter, bodyHeader, storageKey, tourId,
+  formShowPaid, formShowCategory,
+  onAdd, onUpdate, onDelete,
 }: Props) {
   const lsKey = `section_open_${storageKey}`;
   const [open, setOpen]          = useState(true);
   const [showModal, setShowModal] = useState(false);
 
+  // Animated collapse — track the inner content's natural height
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  const [measured, setMeasured]  = useState(false);
+
+  // Single effect: load localStorage state + start ResizeObserver together
+  // so they batch into one re-render and avoid spurious open→close animation on mount.
   useEffect(() => {
-    try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
+    try {
+      const s = localStorage.getItem(lsKey);
+      if (s !== null) setOpen(s === "true");
+    } catch {}
+
+    const el = innerRef.current;
+    if (!el) return;
+    setNaturalHeight(el.scrollHeight);
+    setMeasured(true);
+    const ro = new ResizeObserver(() => setNaturalHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lsKey]);
 
   function toggle() {
@@ -50,24 +75,32 @@ export function Section({
     });
   }
 
-  const total = entries.reduce((a, i) => a + i.amount, 0);
-
-  // Handle negative totals gracefully (e.g. savings with withdrawals)
+  const total      = entries.reduce((a, i) => a + i.amount, 0);
   const shownTotal = sign === "−" ? Math.abs(total) : total;
   const shownSign  = sign === "+" && total < 0 ? "" : sign;
+
+  // Before first measurement use "auto" so the initial paint is correct
+  const collapseHeight = measured
+    ? open ? naturalHeight + "px" : "0px"
+    : open ? "auto" : "0px";
 
   return (
     <>
       {showModal && (
         <AddEntryModal
-          title={title} showCategory={showCategory} showPaid={showPaid}
+          title={title}
+          showCategory={formShowCategory ?? true}
+          showPaid={formShowPaid ?? true}
           defaultPaid={defaultPaid}
-          onAdd={onAdd} onClose={() => setShowModal(false)}
+          onAdd={onAdd}
+          onClose={() => setShowModal(false)}
         />
       )}
 
       <div className="card" {...(tourId ? { "data-tour": tourId } : {})}>
-        <button type="button" onClick={toggle}
+        <button
+          type="button"
+          onClick={toggle}
           className="w-full flex items-center justify-between px-4 py-4
             border-b border-neutral-100 dark:border-neutral-800
             hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors"
@@ -92,15 +125,24 @@ export function Section({
             >
               {shownSign}{fmtEur(shownTotal)}
             </span>
-            <svg className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="6 9 12 15 18 9"/>
+            <svg
+              className={`w-4 h-4 text-neutral-300 dark:text-neutral-600 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            >
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </div>
         </button>
 
-        {open && (
-          <>
+        {/* Animated collapse wrapper */}
+        <div
+          style={{
+            height: collapseHeight,
+            overflow: "hidden",
+            transition: "height 0.3s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        >
+          <div ref={innerRef}>
             {headerAfter}
             <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
               <button
@@ -135,10 +177,17 @@ export function Section({
                   .map((entry, idx) => ({ entry, idx }))
                   .sort((a, b) => (b.entry.date ?? "").localeCompare(a.entry.date ?? ""))
                   .map(({ entry, idx }) => (
-                    <EntryRow key={entry.id} entry={entry} sign={sign} colorClass={accentHex ? "" : totalColor}
+                    <EntryRow
+                      key={entry.id}
+                      entry={entry}
+                      sign={sign}
+                      colorClass={accentHex ? "" : totalColor}
                       accentHex={accentHex}
-                      showPaid={showPaid} showCategory={showCategory}
-                      showDate={showDate} showNotes={showNotes} showName={showName}
+                      showPaid={showPaid}
+                      showCategory={showCategory}
+                      showDate={showDate}
+                      showNotes={showNotes}
+                      showName={showName}
                       readOnly={disabled}
                       onUpdate={updated => onUpdate(idx, updated)}
                       onDelete={() => onDelete(idx)}
@@ -147,13 +196,18 @@ export function Section({
                 }
               </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </div>
     </>
   );
 }
 
 function PlusIcon({ size = 13 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
 }

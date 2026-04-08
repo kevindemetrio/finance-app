@@ -32,6 +32,14 @@ function emptyMonth(): MonthData {
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// Dot color for each section key (used by mobile carousel indicators)
+const SECTION_DOT_CLASS: Record<SectionKey, string> = {
+  incomes:       "bg-brand-green",
+  savings:       "bg-brand-blue",
+  fixedExpenses: "bg-brand-amber",
+  varExpenses:   "bg-brand-red",
+};
+
 export default function HomePage() {
   const router = useRouter();
   const { theme, season } = useTheme();
@@ -76,6 +84,7 @@ export default function HomePage() {
       if (y && m) { setYear(Number(y)); setMonth(Number(m)); }
     } catch {}
   }, []);
+
   const [userEmail, setUserEmail]    = useState("");
   const [search, setSearch]          = useState("");
   const [searchResults, setSearchResults] = useState<Awaited<ReturnType<typeof searchEntries>>>([]);
@@ -87,6 +96,21 @@ export default function HomePage() {
   const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
   const { settings, update: updateSettings } = useUserSettings();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
+
+  // Mobile swipe carousel state
+  const [activeSection, setActiveSection]   = useState(0);
+  const carouselTouchStartX = useRef(0);
+
+  function handleCarouselTouchStart(e: React.TouchEvent) {
+    carouselTouchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleCarouselTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - carouselTouchStartX.current;
+    const maxIdx = settings.sectionOrder.length - 1;
+    if (dx < -50) setActiveSection(s => Math.min(s + 1, maxIdx));
+    else if (dx > 50) setActiveSection(s => Math.max(s - 1, 0));
+  }
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -108,7 +132,6 @@ export default function HomePage() {
     window.addEventListener("section-colors-updated", loadColors);
     return () => window.removeEventListener("section-colors-updated", loadColors);
   }, []);
-
 
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -218,7 +241,6 @@ export default function HomePage() {
     setYear(y); setMonth(m); saveMonth(y, m);
   }
 
-  const varTotal = data.varExpenses.reduce((a,i) => a+i.amount, 0);
   const TYPE_LABEL: Record<string,string> = { income:"Ingreso", fixed:"Fijo", variable:"Variable", saving:"Ahorro" };
   const TYPE_COLOR: Record<string,string> = { income:"text-brand-green", fixed:"text-brand-amber", variable:"text-brand-red", saving:"text-brand-blue" };
 
@@ -259,6 +281,46 @@ export default function HomePage() {
       </button>
     </>
   );
+
+  // Build section JSX — used in both mobile carousel and desktop grid
+  function renderSection(key: SectionKey) {
+    const prefs  = settings.sectionPrefs[key];
+    const common = { showDate: prefs.showDate, showNotes: prefs.showNotes, showName: prefs.showName };
+
+    if (key === "incomes") return (
+      <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
+        entries={data.incomes} storageKey="incomes" tourId="income"
+        accentHex={sectionColors["incomes"]}
+        showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
+        onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
+    );
+    if (key === "savings") return (
+      <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
+        entries={data.savingsEntries} storageKey="savings" tourId="savings"
+        accentHex={sectionColors["savings"]}
+        showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
+        bodyHeader={savingsBodyHeader}
+        onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
+    );
+    if (key === "fixedExpenses") return (
+      <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
+        entries={data.fixedExpenses} storageKey="fixed" tourId="fixed"
+        accentHex={sectionColors["fixedExpenses"]}
+        showPaid={prefs.showPaid} showCategory={prefs.showCategory} disabled={!canWrite} {...common}
+        formShowPaid={true} formShowCategory={true}
+        bodyHeader={fixedBodyHeader}
+        onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
+    );
+    // varExpenses
+    return (
+      <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
+        entries={data.varExpenses} storageKey="variable" tourId="variable"
+        accentHex={sectionColors["varExpenses"]}
+        showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} disabled={!canWrite} {...common}
+        formShowCategory={true}
+        onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
+    );
+  }
 
   return (
     <SeasonWrapper>
@@ -383,7 +445,6 @@ export default function HomePage() {
                 { rows: 2 }, { rows: 3 }, { rows: 4 }, { rows: 3 },
               ].map((s, i) => (
                 <div key={i} className="card overflow-hidden">
-                  {/* Section header */}
                   <div className="flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600" />
@@ -391,7 +452,6 @@ export default function HomePage() {
                     </div>
                     <div className="h-3.5 w-16 bg-neutral-200 dark:bg-neutral-700 rounded" />
                   </div>
-                  {/* Row skeletons */}
                   {[...Array(s.rows)].map((_,j) => (
                     <div key={j} className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
                       <div className="flex-1 space-y-1.5">
@@ -428,47 +488,67 @@ export default function HomePage() {
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {settings.sectionOrder.map((key: SectionKey) => {
-                const prefs = settings.sectionPrefs[key];
-                const common = {
-                  showDate: prefs.showDate, showNotes: prefs.showNotes, showName: prefs.showName,
-                };
-                if (key === "incomes") return (
-                  <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
-                    entries={data.incomes} storageKey="incomes" tourId="income"
-                    accentHex={sectionColors["incomes"]}
-                    showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
-                    onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
-                );
-                if (key === "savings") return (
-                  <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
-                    entries={data.savingsEntries} storageKey="savings" tourId="savings"
-                    accentHex={sectionColors["savings"]}
-                    showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
-                    bodyHeader={savingsBodyHeader}
-                    onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
-                );
-                if (key === "fixedExpenses") return (
-                  <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
-                    entries={data.fixedExpenses} storageKey="fixed" tourId="fixed"
-                    accentHex={sectionColors["fixedExpenses"]}
-                    showPaid={prefs.showPaid} showCategory={prefs.showCategory} disabled={!canWrite} {...common}
-                    bodyHeader={fixedBodyHeader}
-                    onAdd={addFixed} onUpdate={updateFixed} onDelete={deleteFixed} />
-                );
-                return (
-                  <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
-                    entries={data.varExpenses} storageKey="variable" tourId="variable"
-                    accentHex={sectionColors["varExpenses"]}
-                    showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} disabled={!canWrite} {...common}
-                    onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />
-                );
-              })}
+
+            {/* ── Mobile: swipe carousel (hidden on lg+) ───────────────────── */}
+            <div className="lg:hidden">
+              <div
+                className="overflow-hidden"
+                onTouchStart={handleCarouselTouchStart}
+                onTouchEnd={handleCarouselTouchEnd}
+              >
+                <div
+                  className="flex"
+                  style={{
+                    transform: `translateX(-${activeSection * 100}%)`,
+                    transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+                    willChange: "transform",
+                  }}
+                >
+                  {settings.sectionOrder.map((key: SectionKey) => (
+                    <div key={key} className="w-full flex-none min-w-0">
+                      {renderSection(key)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dot indicators */}
+              <div className="flex items-center justify-center gap-2 mt-3 mb-1">
+                {settings.sectionOrder.map((key: SectionKey, i: number) => {
+                  const isActive     = i === activeSection;
+                  const customColor  = sectionColors[key];
+                  const dotBaseClass = SECTION_DOT_CLASS[key];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setActiveSection(i)}
+                      aria-label={`Sección ${i + 1}`}
+                      style={isActive && customColor ? { background: customColor } : undefined}
+                      className={`rounded-full transition-all duration-300 ${
+                        isActive
+                          ? `h-2 w-5 ${!customColor ? dotBaseClass : ""}`
+                          : "h-2 w-2 bg-neutral-300 dark:bg-neutral-600"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
             </div>
-            <CategoryBudgetPanel year={year} month={month} varExpenses={data.varExpenses} budgets={catBudgets} varBudget={data.varBudget ?? 0} disabled={!canWrite}
-                onChange={newBudgets => mutateMonth(current => current ? { ...current, catBudgets: newBudgets } : current, { revalidate: false })}
-                onVarBudgetChange={handleBudget} />
+
+            {/* ── Desktop: 2-column grid (hidden below lg) ─────────────────── */}
+            <div className="hidden lg:grid grid-cols-2 gap-4">
+              {settings.sectionOrder.map((key: SectionKey) => renderSection(key))}
+            </div>
+
+            <CategoryBudgetPanel
+              year={year} month={month}
+              varExpenses={data.varExpenses}
+              budgets={catBudgets}
+              varBudget={data.varBudget ?? 0}
+              disabled={!canWrite}
+              onChange={newBudgets => mutateMonth(current => current ? { ...current, catBudgets: newBudgets } : current, { revalidate: false })}
+              onVarBudgetChange={handleBudget}
+            />
           </>
         )}
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 import { useTheme } from "../../components/ThemeProvider";
 import Link from "next/link";
@@ -86,20 +86,22 @@ function ThemeToggleAuth() {
   );
 }
 
-export default function LoginPage() {
+// Inner component uses useSearchParams — must be inside <Suspense>
+function LoginInner() {
   const router = useRouter();
   const { theme } = useTheme();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get("registered");
 
-  const [email, setEmail]             = useState("");
-  const [password, setPassword]       = useState("");
-  const [error, setError]             = useState("");
-  const [loading, setLoading]         = useState(false);
-  const [resetSent, setResetSent]     = useState(false);
+  const [email, setEmail]               = useState("");
+  const [password, setPassword]         = useState("");
+  const [error, setError]               = useState("");
+  const [loading, setLoading]           = useState(false);
+  const [resetSent, setResetSent]       = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Si el usuario llega a /auth/login con una sesión activa que no es de
-  // recovery (p.ej. sesión residual de un enlace de reset ya procesado),
-  // la cerramos para evitar que el middleware la detecte y redirija a la app.
+  // If the user arrives at /auth/login with a stale active session (not recovery),
+  // sign it out to prevent the middleware from redirecting to the app.
   useEffect(() => {
     const supabase = createClient();
     const hash = window.location.hash;
@@ -153,6 +155,19 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
+
+        {/* ── Registered success banner ──────────────────────────────────── */}
+        {registered === "1" && (
+          <div className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl border
+            bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800
+            text-green-700 dark:text-green-300 text-sm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 mt-0.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Cuenta creada correctamente. Ya puedes iniciar sesión.</span>
+          </div>
+        )}
+
         <div className="rounded-2xl p-8 border transition-all" style={{ background: cardBg, borderColor: cardBorder, backdropFilter: "blur(12px)" }}>
 
           {/* Logo */}
@@ -229,5 +244,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
   );
 }
