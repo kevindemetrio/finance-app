@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Goal, GoalContribution,
   loadGoalContributions, addGoalContribution, deleteGoalContribution,
@@ -40,10 +40,26 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
   const [editColor, setEditColor] = useState(goal.color ?? GOAL_COLORS[0]);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Animated collapse
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  const [measured, setMeasured] = useState(false);
+
+  // Batch localStorage load + ResizeObserver in one effect
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
+
+    const el = innerRef.current;
+    if (!el) return;
+    setNaturalHeight(el.scrollHeight);
+    setMeasured(true);
+    const ro = new ResizeObserver(() => setNaturalHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lsKey]);
 
+  // Load contributions lazily when card is first opened
   useEffect(() => {
     if (!open) return;
     setLoadingContribs(true);
@@ -124,9 +140,14 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
   const pct = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
   const done = goal.savedAmount >= goal.targetAmount;
 
+  const collapseHeight = measured
+    ? open ? naturalHeight + "px" : "0px"
+    : open ? "auto" : "0px";
+
   return (
     <div className="card overflow-hidden relative">
       <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
+
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-4 pt-3.5 pb-3">
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
@@ -151,7 +172,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
         </IconButton>
       </div>
 
-      {/* ── Progress — siempre visible ──────────────────────────────────── */}
+      {/* ── Progress — always visible ───────────────────────────────────── */}
       <div className="px-4 pb-3">
         <div className="h-2 rounded-full overflow-hidden mb-1.5"
              style={{ backgroundColor: `${color}20` }}>
@@ -190,8 +211,15 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
         </div>
       </div>
 
-      {open && (
-        <div className="border-t border-neutral-100 dark:border-neutral-800">
+      {/* Animated collapse wrapper */}
+      <div
+        style={{
+          height: collapseHeight,
+          overflow: "hidden",
+          transition: "height 0.3s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <div ref={innerRef} className="border-t border-neutral-100 dark:border-neutral-800">
 
           {/* ── Edit form ──────────────────────────────────────────────── */}
           {editing && !readOnly && (
@@ -296,7 +324,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
             )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

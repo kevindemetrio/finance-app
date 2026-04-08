@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Investment, InvestmentCategory, CATEGORY_LABELS, CATEGORY_COLORS,
   totalContributions, createInvestment,
@@ -20,9 +20,25 @@ export function CategorySection({ category, investments, onChange }: Props) {
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
 
+  // Animated collapse
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+  const [measured, setMeasured] = useState(false);
+
+  // Batch localStorage + ResizeObserver in one effect to avoid spurious open animation on mount
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
+
+    const el = innerRef.current;
+    if (!el) return;
+    setNaturalHeight(el.scrollHeight);
+    setMeasured(true);
+    const ro = new ResizeObserver(() => setNaturalHeight(el.scrollHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lsKey]);
+
   const [newName, setNewName] = useState("");
   const [newIsin, setNewIsin] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,12 +57,20 @@ export function CategorySection({ category, investments, onChange }: Props) {
     onChange();
   }
 
+  const collapseHeight = measured
+    ? open ? naturalHeight + "px" : "0px"
+    : open ? "auto" : "0px";
+
   return (
     <div className="card overflow-visible">
       {/* Category header — matching Section.tsx style */}
       <button
         type="button"
-        onClick={() => setOpen(o => { const next = !o; try { localStorage.setItem(lsKey, String(next)); } catch {} return next; })}
+        onClick={() => setOpen(o => {
+          const next = !o;
+          try { localStorage.setItem(lsKey, String(next)); } catch {}
+          return next;
+        })}
         className="w-full flex items-center justify-between px-4 py-4
           hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors
           border-b border-neutral-100 dark:border-neutral-800"
@@ -74,8 +98,15 @@ export function CategorySection({ category, investments, onChange }: Props) {
         </div>
       </button>
 
-      {open && (
-        <div className="p-3 space-y-2">
+      {/* Animated collapse wrapper */}
+      <div
+        style={{
+          height: collapseHeight,
+          overflow: "hidden",
+          transition: "height 0.3s cubic-bezier(0.4,0,0.2,1)",
+        }}
+      >
+        <div ref={innerRef} className="p-3 space-y-2">
           {/* Investment cards */}
           {investments.map((inv) => (
             <InvestmentCard key={inv.id} investment={inv} onChange={onChange} />
@@ -118,7 +149,7 @@ export function CategorySection({ category, investments, onChange }: Props) {
             </button>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

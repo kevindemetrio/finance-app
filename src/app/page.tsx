@@ -32,13 +32,6 @@ function emptyMonth(): MonthData {
 
 const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-// Dot color for each section key (used by mobile carousel indicators)
-const SECTION_DOT_CLASS: Record<SectionKey, string> = {
-  incomes:       "bg-brand-green",
-  savings:       "bg-brand-blue",
-  fixedExpenses: "bg-brand-amber",
-  varExpenses:   "bg-brand-red",
-};
 
 export default function HomePage() {
   const router = useRouter();
@@ -96,21 +89,6 @@ export default function HomePage() {
   const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
   const { settings, update: updateSettings } = useUserSettings();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
-
-  // Mobile swipe carousel state
-  const [activeSection, setActiveSection]   = useState(0);
-  const carouselTouchStartX = useRef(0);
-
-  function handleCarouselTouchStart(e: React.TouchEvent) {
-    carouselTouchStartX.current = e.touches[0].clientX;
-  }
-
-  function handleCarouselTouchEnd(e: React.TouchEvent) {
-    const dx = e.changedTouches[0].clientX - carouselTouchStartX.current;
-    const maxIdx = settings.sectionOrder.length - 1;
-    if (dx < -50) setActiveSection(s => Math.min(s + 1, maxIdx));
-    else if (dx > 50) setActiveSection(s => Math.max(s - 1, 0));
-  }
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -489,54 +467,7 @@ export default function HomePage() {
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
 
-            {/* ── Mobile: swipe carousel (hidden on lg+) ───────────────────── */}
-            <div className="lg:hidden">
-              <div
-                className="overflow-hidden"
-                onTouchStart={handleCarouselTouchStart}
-                onTouchEnd={handleCarouselTouchEnd}
-              >
-                <div
-                  className="flex"
-                  style={{
-                    transform: `translateX(-${activeSection * 100}%)`,
-                    transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
-                    willChange: "transform",
-                  }}
-                >
-                  {settings.sectionOrder.map((key: SectionKey) => (
-                    <div key={key} className="w-full flex-none min-w-0">
-                      {renderSection(key)}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dot indicators */}
-              <div className="flex items-center justify-center gap-2 mt-3 mb-1">
-                {settings.sectionOrder.map((key: SectionKey, i: number) => {
-                  const isActive     = i === activeSection;
-                  const customColor  = sectionColors[key];
-                  const dotBaseClass = SECTION_DOT_CLASS[key];
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setActiveSection(i)}
-                      aria-label={`Sección ${i + 1}`}
-                      style={isActive && customColor ? { background: customColor } : undefined}
-                      className={`rounded-full transition-all duration-300 ${
-                        isActive
-                          ? `h-2 w-5 ${!customColor ? dotBaseClass : ""}`
-                          : "h-2 w-2 bg-neutral-300 dark:bg-neutral-600"
-                      }`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── Desktop: 2-column grid (hidden below lg) ─────────────────── */}
-            <div className="hidden lg:grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {settings.sectionOrder.map((key: SectionKey) => renderSection(key))}
             </div>
 
