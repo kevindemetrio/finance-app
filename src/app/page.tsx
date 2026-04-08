@@ -326,8 +326,7 @@ export default function HomePage() {
           <div className="flex items-center gap-1 pl-2 border-l border-neutral-200 dark:border-neutral-700 ml-1">
             <PdfReportButton year={year} month={month} data={data} totalSavings={totalSavings} categoryBudgets={catBudgets} carryover={data.carryover ?? 0} disabled={!canUsePdf} />
             <ThemeToggle />
-            {/* stopPropagation on mousedown so SettingsPanel's outside-click handler doesn't fire when clicking this button */}
-            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+            <div>
               <button
                 onClick={() => setShowSettings(v => !v)}
                 title="Ajustes"

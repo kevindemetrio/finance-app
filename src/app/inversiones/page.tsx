@@ -138,7 +138,7 @@ export default function InversionesPage() {
           <h1 className="text-lg font-medium lg:hidden">Inversiones</h1>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+            <div>
               <button
                 onClick={() => setShowSettings(v => !v)}
                 title="Ajustes"

@@ -124,7 +124,7 @@ export default function MetasPage() {
           <h1 className="text-lg font-medium lg:hidden">Metas</h1>
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            <div className="relative" onMouseDown={e => e.stopPropagation()}>
+            <div>
               <button
                 onClick={() => setShowSettings(v => !v)}
                 title="Ajustes"
