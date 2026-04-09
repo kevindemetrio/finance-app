@@ -128,7 +128,6 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
     }
   }
 
-  // Batch localStorage load + ResizeObserver in one effect
   useEffect(() => {
     try { const s = localStorage.getItem(lsKey); if (s !== null) setOpen(s === "true"); } catch {}
 
@@ -149,7 +148,6 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
     loadGoalContributions(goal.id).then(c => { setContributions(c); setLoadingContribs(false); });
   }, [open, goal.id]);
 
-  // Close edit/add forms if readOnly becomes true
   useEffect(() => {
     if (readOnly) { setEditing(false); setAddingContrib(false); }
   }, [readOnly]);
@@ -222,15 +220,17 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
   const color = goal.color ?? GOAL_COLORS[0];
   const pct = Math.min(Math.round((goal.savedAmount / goal.targetAmount) * 100), 100);
   const done = goal.savedAmount >= goal.targetAmount;
+  const remaining = goal.targetAmount - goal.savedAmount;
 
   const collapseHeight = measured
     ? open ? naturalHeight + "px" : "0px"
     : open ? "auto" : "0px";
 
   return (
-    <div className="card overflow-hidden relative">
-      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
-
+    <div
+      className="card overflow-hidden"
+      style={{ borderLeftColor: color, borderLeftWidth: "4px" }}
+    >
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden">
         {/* Delete reveal */}
@@ -255,33 +255,47 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
           onTouchMove={onHeaderTouchMove}
           onTouchEnd={onHeaderTouchEnd}
         >
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-        <span className="text-sm font-semibold truncate flex-1">{goal.name}</span>
-        <span className="text-sm font-bold shrink-0 tabular-nums" style={{ color }}>
-          {fmtEur(goal.savedAmount)}
-        </span>
-        <button
-          onClick={openEdit}
-          title={readOnly ? "No disponible" : "Editar meta"}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
-            text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
-            hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90
-            ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
-        >
-          <PencilIcon />
-        </button>
-        <button
-          onClick={handleDelete}
-          title={readOnly ? "No disponible" : "Eliminar meta"}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
-            text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
-            hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90
-            ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
-        >
-          <XIcon />
-        </button>
-        </div>{/* end headerContentRef */}
-      </div>{/* end swipe container */}
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">{goal.name}</p>
+          </div>
+          {/* Amounts: saved / target + remaining */}
+          <div className="flex flex-col items-end shrink-0 mr-1">
+            <span className="text-sm font-bold tabular-nums" style={{ color }}>
+              {fmtEur(goal.savedAmount)}
+              <span className="text-neutral-300 dark:text-neutral-600 font-normal text-xs"> / {fmtEur(goal.targetAmount)}</span>
+            </span>
+            {!done && (
+              <span className="text-[11px] text-neutral-400 dark:text-neutral-500 tabular-nums leading-tight">
+                Quedan {fmtEur(remaining)}
+              </span>
+            )}
+            {done && (
+              <span className="text-[11px] font-semibold leading-tight" style={{ color }}>✓ Completada</span>
+            )}
+          </div>
+          <button
+            onClick={openEdit}
+            title={readOnly ? "No disponible" : "Editar meta"}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+              hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all active:scale-90
+              ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
+          >
+            <PencilIcon />
+          </button>
+          <button
+            onClick={handleDelete}
+            title={readOnly ? "No disponible" : "Eliminar meta"}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
+              text-neutral-400 hover:text-red-500 hover:border-red-300 dark:hover:border-red-700
+              hover:bg-red-50 dark:hover:bg-red-950/40 transition-all active:scale-90
+              ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
+          >
+            <XIcon />
+          </button>
+        </div>
+      </div>
 
       {/* ── Progress — always visible ───────────────────────────────────── */}
       <div className="px-4 pb-3">
@@ -293,27 +307,72 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-            {done
-              ? <span className="font-semibold" style={{ color }}>✓ Completada</span>
-              : <>Faltan {fmtEur(goal.targetAmount - goal.savedAmount)}</>}
-          </span>
-          <div className="flex items-center gap-2">
-            {goal.deadline && (
-              <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}
-              </span>
-            )}
-            <span className="text-xs font-bold tabular-nums" style={{ color }}>{pct}%</span>
-          </div>
+          <span className="text-xs font-bold tabular-nums" style={{ color }}>{pct}%</span>
+          {goal.deadline && (
+            <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
+              {new Date(goal.deadline).toLocaleDateString("es-ES", { month: "short", year: "numeric" })}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* ── Full-width toggle button ─────────────────────────────────────── */}
+      {/* ── Add contribution — always visible ────────────────────────────── */}
+      <div className="border-t border-neutral-100 dark:border-neutral-800">
+        {!addingContrib ? (
+          <button
+            onClick={handleAddContribClick}
+            disabled={!!readOnly}
+            className={`w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-all
+              hover:opacity-80 active:scale-[0.98]
+              ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
+            style={{ color }}
+          >
+            <PlusIcon />
+            Añadir aportación
+          </button>
+        ) : (
+          <div className="px-4 py-3 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
+              Registrar aportación
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <TextInput
+                type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)}
+                placeholder="€" className="w-20" step="0.01" min="0" autoFocus
+                onKeyDown={e => e.key === "Enter" && handleAddContribution()}
+              />
+              <TextInput
+                type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
+                className="w-34"
+              />
+              <TextInput
+                value={addNotes} onChange={e => setAddNotes(e.target.value)}
+                placeholder="Nota (opcional)" className="flex-1 min-w-[100px]"
+                onKeyDown={e => e.key === "Enter" && handleAddContribution()}
+              />
+            </div>
+            <div className="flex gap-2">
+              <GhostButton onClick={() => { setAddingContrib(false); setAddAmount(""); setAddDate(todayStr()); setAddNotes(""); }}>
+                Cancelar
+              </GhostButton>
+              <button
+                onClick={handleAddContribution}
+                disabled={!addAmount || isNaN(parseFloat(addAmount)) || parseFloat(addAmount) === 0}
+                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white disabled:opacity-40"
+                style={{ background: color }}
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Toggle: ver/ocultar aportaciones ───────────────────────────── */}
       <button
         type="button"
         onClick={toggle}
-        className="w-full flex items-center justify-center gap-2 py-2.5
+        className="w-full flex items-center justify-center gap-2 py-2
           border-t border-neutral-100 dark:border-neutral-800
           text-xs font-semibold text-neutral-400 dark:text-neutral-500
           hover:text-neutral-700 dark:hover:text-neutral-200
@@ -329,7 +388,7 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
         {open ? "Ocultar aportaciones" : "Ver aportaciones"}
       </button>
 
-      {/* Animated collapse wrapper */}
+      {/* Animated collapse — edit form + contributions list */}
       <div
         style={{
           height: collapseHeight,
@@ -362,55 +421,6 @@ export function GoalCard({ goal, onDelete, onSavedAmountChange, readOnly }: Prop
               </div>
             </div>
           )}
-
-          {/* ── Add contribution ──────────────────────────────────────── */}
-          <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-            {!addingContrib ? (
-              <button
-                onClick={handleAddContribClick}
-                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white
-                  ${readOnly ? "opacity-40 cursor-not-allowed" : ""}`}
-                style={{ background: color }}
-              >
-                + Añadir aportación
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-500">
-                  Registrar aportación
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <TextInput
-                    type="number" value={addAmount} onChange={e => setAddAmount(e.target.value)}
-                    placeholder="€" className="w-20" step="0.01" min="0" autoFocus
-                    onKeyDown={e => e.key === "Enter" && handleAddContribution()}
-                  />
-                  <TextInput
-                    type="date" value={addDate} onChange={e => setAddDate(e.target.value)}
-                    className="w-34"
-                  />
-                  <TextInput
-                    value={addNotes} onChange={e => setAddNotes(e.target.value)}
-                    placeholder="Nota (opcional)" className="flex-1 min-w-[100px]"
-                    onKeyDown={e => e.key === "Enter" && handleAddContribution()}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <GhostButton onClick={() => { setAddingContrib(false); setAddAmount(""); setAddDate(todayStr()); setAddNotes(""); }}>
-                    Cancelar
-                  </GhostButton>
-                  <button
-                    onClick={handleAddContribution}
-                    disabled={!addAmount || isNaN(parseFloat(addAmount)) || parseFloat(addAmount) === 0}
-                    className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-xl transition-colors text-white disabled:opacity-40"
-                    style={{ background: color }}
-                  >
-                    Guardar
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* ── Contributions list ─────────────────────────────────────── */}
           <div className="px-4 py-2 pb-3">
@@ -457,6 +467,9 @@ function fmt(d: string) {
   return `${day}/${m}`;
 }
 
+function PlusIcon() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+}
 function PencilIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 }
