@@ -226,8 +226,8 @@ export default function HomePage() {
   const savingsBodyHeader = (
     <button
       onClick={() => setShowWithdrawSaving(true)}
-      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-brand-red
-        hover:bg-brand-red-light dark:hover:bg-red-950 transition-colors"
+      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all hover:opacity-80 active:scale-[0.98]"
+      style={{ color: "#E24B4A", borderColor: "#E24B4A50", background: "#E24B4A12" }}
     >
       <WithdrawIcon /> Retirar
     </button>
@@ -238,26 +238,32 @@ export default function HomePage() {
     <>
       <button
         onClick={() => { if (canWrite) setShowTemplate(true); }}
-        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold
-          text-neutral-500 dark:text-neutral-400
-          hover:bg-neutral-50 dark:hover:bg-neutral-800/40
-          hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors
+        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all hover:opacity-80 active:scale-[0.98]
           ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
+        style={{ color: "#6b7280", borderColor: "rgba(0,0,0,0.12)", background: "rgba(0,0,0,0.03)" }}
       >
         <GridIcon /> Plantilla
       </button>
       <button
         onClick={handleImportTemplate}
         disabled={importing}
-        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-brand-amber
-          hover:bg-brand-amber-light dark:hover:bg-amber-950 transition-colors disabled:opacity-50
+        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all hover:opacity-80 active:scale-[0.98] disabled:opacity-50
           ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
+        style={{ color: "#BA7517", borderColor: "#BA751750", background: "#BA751712" }}
       >
         <ImportIcon />
         {importing ? "..." : "Importar"}
       </button>
     </>
   );
+
+  // Brand fallback hex per section (used when no custom color is set)
+  const SECTION_HEX: Record<string, string> = {
+    incomes: "#1D9E75",
+    savings: "#378ADD",
+    fixedExpenses: "#BA7517",
+    varExpenses: "#E24B4A",
+  };
 
   // Build section JSX — used in both mobile carousel and desktop grid
   function renderSection(key: SectionKey) {
@@ -267,14 +273,14 @@ export default function HomePage() {
     if (key === "incomes") return (
       <Section key="incomes" title="Ingresos" dotColor="bg-brand-green" totalColor="text-brand-green" sign="+"
         entries={data.incomes} storageKey="incomes" tourId="income"
-        accentHex={sectionColors["incomes"]}
+        accentHex={sectionColors["incomes"] || SECTION_HEX.incomes}
         showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
         onAdd={addIncome} onUpdate={updateIncome} onDelete={deleteIncome} />
     );
     if (key === "savings") return (
       <Section key="savings" title="Ahorros" dotColor="bg-brand-blue" totalColor="text-brand-blue" sign="+"
         entries={data.savingsEntries} storageKey="savings" tourId="savings"
-        accentHex={sectionColors["savings"]}
+        accentHex={sectionColors["savings"] || SECTION_HEX.savings}
         showCategory={prefs.showCategory} showPaid={false} disabled={!canWrite} {...common}
         bodyHeader={savingsBodyHeader}
         onAdd={addSaving} onUpdate={updateSaving} onDelete={deleteSaving} />
@@ -282,7 +288,7 @@ export default function HomePage() {
     if (key === "fixedExpenses") return (
       <Section key="fixedExpenses" title="Gastos fijos" dotColor="bg-brand-amber" totalColor="text-brand-amber" sign="−"
         entries={data.fixedExpenses} storageKey="fixed" tourId="fixed"
-        accentHex={sectionColors["fixedExpenses"]}
+        accentHex={sectionColors["fixedExpenses"] || SECTION_HEX.fixedExpenses}
         showPaid={prefs.showPaid} showCategory={prefs.showCategory} disabled={!canWrite} {...common}
         formShowPaid={true} formShowCategory={true}
         bodyHeader={fixedBodyHeader}
@@ -292,7 +298,7 @@ export default function HomePage() {
     return (
       <Section key="varExpenses" title="Gastos variables" dotColor="bg-brand-red" totalColor="text-brand-red" sign="−"
         entries={data.varExpenses} storageKey="variable" tourId="variable"
-        accentHex={sectionColors["varExpenses"]}
+        accentHex={sectionColors["varExpenses"] || SECTION_HEX.varExpenses}
         showCategory={prefs.showCategory} showPaid={prefs.showPaid} defaultPaid={true} disabled={!canWrite} {...common}
         formShowCategory={true}
         onAdd={addVar} onUpdate={updateVar} onDelete={deleteVar} />

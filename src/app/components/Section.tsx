@@ -144,13 +144,21 @@ export function Section({
             {headerAfter}
 
             {/* Action bar — always at the top of expanded content */}
-            <div className="flex border-b border-neutral-100 dark:border-neutral-800 divide-x divide-neutral-100 dark:divide-neutral-800">
+            <div className="flex gap-2 px-3 py-2.5 border-b border-neutral-100 dark:border-neutral-800">
               <button
                 onClick={() => { if (!disabled) setShowModal(true); }}
                 disabled={disabled}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors
-                  ${disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40 active:scale-[0.98]"}`}
-                style={accentHex ? { color: accentHex } : { color: "#6b7280" }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg border transition-all
+                  ${disabled ? "opacity-40 cursor-not-allowed" : "hover:opacity-80 active:scale-[0.98]"}`}
+                style={accentHex ? {
+                  color: accentHex,
+                  borderColor: `${accentHex}50`,
+                  background: `${accentHex}12`,
+                } : {
+                  color: "#6b7280",
+                  borderColor: "rgba(0,0,0,0.12)",
+                  background: "rgba(0,0,0,0.03)",
+                }}
               >
                 <PlusIcon size={11} />
                 Añadir
