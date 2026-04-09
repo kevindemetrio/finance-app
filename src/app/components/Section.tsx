@@ -50,7 +50,6 @@ export function Section({
   const [measured, setMeasured]  = useState(false);
 
   // Single effect: load localStorage state + start ResizeObserver together
-  // so they batch into one re-render and avoid spurious open→close animation on mount.
   useEffect(() => {
     try {
       const s = localStorage.getItem(lsKey);
@@ -79,10 +78,20 @@ export function Section({
   const shownTotal = sign === "−" ? Math.abs(total) : total;
   const shownSign  = sign === "+" && total < 0 ? "" : sign;
 
-  // Before first measurement use "auto" so the initial paint is correct
   const collapseHeight = measured
     ? open ? naturalHeight + "px" : "0px"
     : open ? "auto" : "0px";
+
+  // Add button style matching section accent
+  const addBtnStyle = accentHex ? {
+    color: accentHex,
+    borderColor: `${accentHex}40`,
+    background: `${accentHex}10`,
+  } : {
+    color: "#6b7280",
+    borderColor: "rgba(0,0,0,0.1)",
+    background: "rgba(0,0,0,0.02)",
+  };
 
   return (
     <>
@@ -144,11 +153,21 @@ export function Section({
         >
           <div ref={innerRef}>
             {headerAfter}
-            {bodyHeader && (
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
-                {bodyHeader}
-              </div>
-            )}
+
+            {/* Action bar — always at the top of expanded content */}
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
+              <button
+                onClick={() => { if (!disabled) setShowModal(true); }}
+                disabled={disabled}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all active:scale-[0.97]
+                  ${disabled ? "opacity-40 cursor-not-allowed" : "hover:opacity-80"}`}
+                style={addBtnStyle}
+              >
+                <PlusIcon size={11} />
+                Añadir
+              </button>
+              {bodyHeader}
+            </div>
 
             {entries.length === 0 ? (
               <div className="px-4 py-10 text-center flex flex-col items-center gap-3 bg-neutral-50/40 dark:bg-neutral-800/10">
@@ -191,27 +210,6 @@ export function Section({
             )}
           </div>
         </div>
-
-        {/* Full-width add button — always visible footer */}
-        <button
-          onClick={() => { if (!disabled) setShowModal(true); }}
-          disabled={disabled}
-          className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold
-            border-t transition-all active:scale-[0.99] rounded-b-xl
-            ${disabled ? "opacity-40 cursor-not-allowed" : "hover:opacity-80"}`}
-          style={accentHex ? {
-            background: `${accentHex}12`,
-            color: accentHex,
-            borderColor: `${accentHex}28`,
-          } : {
-            background: "rgba(0,0,0,0.03)",
-            color: "#6b7280",
-            borderColor: "rgba(0,0,0,0.08)",
-          }}
-        >
-          <PlusIcon size={13} />
-          Añadir {title.toLowerCase()}
-        </button>
       </div>
     </>
   );

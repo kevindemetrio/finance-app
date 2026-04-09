@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   SectionKey, SectionPrefs, UserSettings, SECTION_LABELS, SECTION_AVAILABLE_FIELDS,
 } from "../lib/userSettings";
-import { createClient } from "../lib/supabase/client";
-import { toast } from "./Toast";
 
 interface PageOrderItem { id: string; label: string; color?: string; }
 interface PageOrderConfig { title: string; items: PageOrderItem[]; onMove: (id: string, dir: -1 | 1) => void; }
@@ -33,7 +31,10 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
-  const [sendingReset, setSendingReset] = useState(false);
+
+  // Drag-and-drop state for section order
+  const [dragKey, setDragKey] = useState<SectionKey | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<SectionKey | null>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -44,20 +45,6 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function handlePasswordReset() {
-    if (sendingReset) return;
-    setSendingReset(true);
-    const { error } = await createClient().auth.resetPasswordForEmail(userEmail, {
-      redirectTo: `${window.location.origin}/auth/update-password`,
-    });
-    if (error) {
-      toast("Error al enviar el email", "error");
-    } else {
-      toast("Email de cambio de contraseña enviado", "info");
-    }
-    setSendingReset(false);
-  }
-
   function moveSection(key: SectionKey, dir: -1 | 1) {
     onUpdate(prev => {
       const order = [...prev.sectionOrder];
@@ -67,6 +54,38 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
       [order[i], order[j]] = [order[j], order[i]];
       return { ...prev, sectionOrder: order };
     });
+  }
+
+  function handleDragStart(key: SectionKey) {
+    setDragKey(key);
+  }
+
+  function handleDragOver(e: React.DragEvent, key: SectionKey) {
+    e.preventDefault();
+    if (key !== dragKey) setDragOverKey(key);
+  }
+
+  function handleDrop(key: SectionKey) {
+    if (!dragKey || dragKey === key) {
+      setDragKey(null);
+      setDragOverKey(null);
+      return;
+    }
+    onUpdate(prev => {
+      const order = [...prev.sectionOrder];
+      const fromIdx = order.indexOf(dragKey);
+      const toIdx = order.indexOf(key);
+      order.splice(fromIdx, 1);
+      order.splice(toIdx, 0, dragKey);
+      return { ...prev, sectionOrder: order };
+    });
+    setDragKey(null);
+    setDragOverKey(null);
+  }
+
+  function handleDragEnd() {
+    setDragKey(null);
+    setDragOverKey(null);
   }
 
   function toggleField(section: SectionKey, field: keyof SectionPrefs) {
@@ -117,7 +136,7 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg
+            className="w-7 h-7 flex items-center justify-between rounded-lg
               text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200
               hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
             title="Cerrar"
@@ -153,15 +172,28 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
           </button>
         </div>
 
-        {/* ── Account actions ──────────────────────────────────────────── */}
-        <div className="px-3 mb-2 space-y-0.5">
-          <ActionRow icon={<KeyIcon />} label={sendingReset ? "Enviando…" : "Cambiar contraseña"}
-            onClick={handlePasswordReset} disabled={sendingReset} />
-          {onOpenTemplate && (
-            <ActionRow icon={<GridIcon />} label="Plantilla de gastos fijos"
-              onClick={() => { onOpenTemplate(); onClose(); }} />
-          )}
-        </div>
+        {/* ── Plantilla de gastos fijos ────────────────────────────────── */}
+        {onOpenTemplate && (
+          <>
+            <Divider />
+            <div className="px-3 mb-2">
+              <PanelSectionTitle icon={<GridIcon />}>Plantilla de gastos fijos</PanelSectionTitle>
+              <div className="mt-1.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
+                <button
+                  onClick={() => { onOpenTemplate(); onClose(); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5
+                    bg-white dark:bg-neutral-800/30
+                    hover:bg-neutral-50 dark:hover:bg-neutral-800/60
+                    transition-colors text-sm text-neutral-700 dark:text-neutral-300"
+                >
+                  <span className="text-neutral-400 dark:text-neutral-500"><GridIcon /></span>
+                  <span className="flex-1 text-left">Gestionar plantilla</span>
+                  <svg className="w-3 h-3 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Page-specific order (metas / inversiones) ────────────────── */}
         {pageOrder && (
@@ -181,7 +213,7 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
                       : <span className="w-5 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
                     }
                     <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300 truncate">{item.label}</span>
-                    <div className="flex gap-0.5">
+                    <div className="flex gap-1">
                       <MoveButton onClick={() => pageOrder.onMove(item.id, -1)} disabled={i === 0} up />
                       <MoveButton onClick={() => pageOrder.onMove(item.id, 1)} disabled={i === pageOrder.items.length - 1} />
                     </div>
@@ -201,14 +233,29 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
               <PanelSectionTitle icon={<OrderIcon />}>Orden de secciones</PanelSectionTitle>
               <div className="mt-1.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
                 {settings.sectionOrder.map((key, i) => (
-                  <div key={key}
+                  <div
+                    key={key}
+                    draggable
+                    onDragStart={() => handleDragStart(key)}
+                    onDragOver={e => handleDragOver(e, key)}
+                    onDrop={() => handleDrop(key)}
+                    onDragEnd={handleDragEnd}
                     className={`flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-neutral-800/30
-                      hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors
-                      ${i < settings.sectionOrder.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}`}
+                      transition-colors select-none
+                      ${i < settings.sectionOrder.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}
+                      ${dragKey === key ? "opacity-40" : ""}
+                      ${dragOverKey === key && dragKey !== key
+                        ? "bg-blue-50 dark:bg-blue-950/20 border-l-2 border-l-brand-blue"
+                        : "hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                      }`}
+                    style={{ cursor: dragKey ? "grabbing" : "grab" }}
                   >
-                    <span className="w-5 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-600 select-none tabular-nums">{i + 1}</span>
+                    <span className="text-neutral-300 dark:text-neutral-700 shrink-0" title="Arrastrar para reordenar">
+                      <GripIcon />
+                    </span>
+                    <span className="w-4 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-600 select-none tabular-nums">{i + 1}</span>
                     <span className="flex-1 text-sm text-neutral-700 dark:text-neutral-300">{SECTION_LABELS[key]}</span>
-                    <div className="flex gap-0.5">
+                    <div className="flex gap-1">
                       <MoveButton onClick={() => moveSection(key, -1)} disabled={i === 0} up />
                       <MoveButton onClick={() => moveSection(key, 1)} disabled={i === settings.sectionOrder.length - 1} />
                     </div>
@@ -297,7 +344,6 @@ function FieldGroup({ label, isOpen, onCount, total, onToggle, children }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-measure when children change (toggles affect height)
   useLayoutEffect(() => {
     const el = innerRef.current;
     if (el) setHeight(el.scrollHeight);
@@ -364,31 +410,13 @@ function MoveButton({ onClick, disabled, up }: { onClick: () => void; disabled?:
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-7 h-7 flex items-center justify-center rounded-lg
-        text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200
-        hover:bg-neutral-100 dark:hover:bg-neutral-700
-        disabled:opacity-20 transition-all active:scale-90"
+      className="w-8 h-8 flex items-center justify-center rounded-lg
+        border border-neutral-200 dark:border-neutral-700
+        text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
+        hover:bg-blue-50 dark:hover:bg-blue-950/40
+        disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-90"
     >
       {up ? <ChevronUpIcon /> : <ChevronDownIcon />}
-    </button>
-  );
-}
-
-function ActionRow({ icon, label, onClick, disabled }: {
-  icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
-        text-neutral-600 dark:text-neutral-400
-        hover:text-neutral-900 dark:hover:text-neutral-100
-        hover:bg-neutral-100 dark:hover:bg-neutral-800
-        transition-colors disabled:opacity-50 active:scale-[0.98]"
-    >
-      <span className="text-neutral-400 dark:text-neutral-500 shrink-0">{icon}</span>
-      {label}
     </button>
   );
 }
@@ -400,9 +428,6 @@ function XIcon() {
 }
 function GearSmIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
-}
-function KeyIcon() {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>;
 }
 function GridIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
@@ -421,4 +446,16 @@ function EyeIcon() {
 }
 function SettingsLinkIcon() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+}
+function GripIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="9" cy="6" r="1.5"/>
+      <circle cx="9" cy="12" r="1.5"/>
+      <circle cx="9" cy="18" r="1.5"/>
+      <circle cx="15" cy="6" r="1.5"/>
+      <circle cx="15" cy="12" r="1.5"/>
+      <circle cx="15" cy="18" r="1.5"/>
+    </svg>
+  );
 }

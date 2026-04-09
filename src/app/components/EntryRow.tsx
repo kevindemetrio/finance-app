@@ -1,10 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Category, Entry, fmtDate, fmtEur, todayStr } from "../lib/data";
-import { Badge, GhostButton, SaveButton, TextInput } from "./ui";
-import { toast } from "./Toast";
-import { useCategories } from "./CategoriesProvider";
+import { Entry, fmtDate, fmtEur } from "../lib/data";
+import { Badge } from "./ui";
+import { EditEntryModal } from "./EditEntryModal";
 
 interface Props {
   entry: Entry;
@@ -49,14 +48,7 @@ export function EntryRow({
   entry, sign, colorClass, accentHex, showPaid, showCategory,
   showDate = true, showNotes = true, showName = true, readOnly, onUpdate, onDelete,
 }: Props) {
-  const { categories } = useCategories();
-  const [editing, setEditing]   = useState(false);
-  const [name, setName]         = useState(entry.name);
-  const [amount, setAmount]     = useState(String(entry.amount));
-  const [date, setDate]         = useState(entry.date ?? todayStr());
-  const [paid, setPaid]         = useState(entry.paid ?? false);
-  const [category, setCategory] = useState(entry.category ?? "");
-  const [notes, setNotes]       = useState(entry.notes ?? "");
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // ── Swipe-to-reveal (touch only) ──────────────────────────────────────────
   const touchStartX  = useRef(0);
@@ -105,8 +97,8 @@ export function EntryRow({
   }
 
   function onTouchStart(e: React.TouchEvent) {
-    if (editing || readOnly) return;
-    e.stopPropagation(); // prevent carousel from capturing
+    if (readOnly) return;
+    e.stopPropagation();
     touchStartX.current  = e.touches[0].clientX;
     touchStartY.current  = e.touches[0].clientY;
     isHorizRef.current   = null;
@@ -119,12 +111,10 @@ export function EntryRow({
     const dx = e.touches[0].clientX - touchStartX.current;
     const dy = e.touches[0].clientY - touchStartY.current;
 
-    // Determine swipe direction on first meaningful move
     if (isHorizRef.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
       isHorizRef.current = Math.abs(dx) > Math.abs(dy);
     }
 
-    // Cancel if mostly vertical (allow scroll)
     if (isHorizRef.current === false) {
       isSwipingRef.current = false;
       snapBack();
@@ -144,27 +134,10 @@ export function EntryRow({
     snapBack();
 
     if (dx < -80) {
-      // Left swipe → delete
       onDelete();
     } else if (dx > 60) {
-      // Right swipe → edit
-      setEditing(true);
+      setShowEditModal(true);
     }
-  }
-
-  function handleSave() {
-    const a = parseFloat(amount);
-    if (!name.trim() || isNaN(a)) return;
-    onUpdate({ ...entry, name: name.trim(), amount: a, date, paid, category: category as Category || undefined, notes: notes.trim() || undefined });
-    setEditing(false);
-    toast("Movimiento actualizado");
-  }
-
-  function handleCancel() {
-    setName(entry.name); setAmount(String(entry.amount));
-    setDate(entry.date ?? todayStr()); setPaid(entry.paid ?? false);
-    setCategory(entry.category ?? ""); setNotes(entry.notes ?? "");
-    setEditing(false);
   }
 
   // B5: negative amount display
@@ -174,6 +147,16 @@ export function EntryRow({
 
   return (
     <div>
+      {showEditModal && !readOnly && (
+        <EditEntryModal
+          entry={entry}
+          showCategory={showCategory}
+          showPaid={showPaid}
+          onSave={onUpdate}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
       {/* Swipe container */}
       <div className="relative overflow-hidden">
 
@@ -239,7 +222,7 @@ export function EntryRow({
           {!readOnly && (
             <div className="flex items-center gap-1 pt-0.5">
               <button
-                onClick={() => setEditing(!editing)}
+                onClick={() => setShowEditModal(true)}
                 title="Editar"
                 className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700
                   text-neutral-400 hover:text-brand-blue hover:border-blue-300 dark:hover:border-blue-700
@@ -260,31 +243,6 @@ export function EntryRow({
           )}
         </div>
       </div>
-
-      {editing && !readOnly && (
-        <div className="flex flex-wrap gap-2 px-4 py-3 bg-neutral-50 dark:bg-neutral-800/40
-          border-l-2 border-brand-blue border-b border-neutral-100 dark:border-neutral-800">
-          <p className="w-full text-xs font-medium text-brand-blue mb-1">Editando: {entry.name}</p>
-          <TextInput value={name} onChange={e => setName(e.target.value)} placeholder="Descripción" className="flex-1 min-w-[120px]" />
-          <TextInput type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Importe €" step="0.01" className="w-28" />
-          <TextInput type="date" value={date} onChange={e => setDate(e.target.value)} className="w-36" />
-          {showCategory && (
-            <select value={category} onChange={e => setCategory(e.target.value)} className="input-base w-36">
-              <option value="">Sin categoría</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          )}
-          {showPaid && (
-            <select value={paid ? "1" : "0"} onChange={e => setPaid(e.target.value === "1")} className="input-base w-32">
-              <option value="0">Pendiente</option>
-              <option value="1">Cobrado</option>
-            </select>
-          )}
-          <TextInput value={notes} onChange={e => setNotes(e.target.value)} placeholder="Nota (opcional)..." className="w-full" />
-          <SaveButton onClick={handleSave} />
-          <GhostButton onClick={handleCancel}>Cancelar</GhostButton>
-        </div>
-      )}
     </div>
   );
 }
