@@ -226,8 +226,7 @@ export default function HomePage() {
   const savingsBodyHeader = (
     <button
       onClick={() => setShowWithdrawSaving(true)}
-      className="flex items-center gap-1.5 text-xs text-brand-red
-        border border-brand-red rounded-lg px-2.5 py-1.5
+      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-brand-red
         hover:bg-brand-red-light dark:hover:bg-red-950 transition-colors"
     >
       <WithdrawIcon /> Retirar
@@ -239,9 +238,10 @@ export default function HomePage() {
     <>
       <button
         onClick={() => { if (canWrite) setShowTemplate(true); }}
-        className={`flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400
-          border border-neutral-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 transition-colors
-          hover:text-neutral-700 dark:hover:text-neutral-200 hover:border-neutral-400
+        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold
+          text-neutral-500 dark:text-neutral-400
+          hover:bg-neutral-50 dark:hover:bg-neutral-800/40
+          hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors
           ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
       >
         <GridIcon /> Plantilla
@@ -249,13 +249,12 @@ export default function HomePage() {
       <button
         onClick={handleImportTemplate}
         disabled={importing}
-        className={`flex items-center gap-1.5 text-xs text-brand-amber
-          border border-brand-amber rounded-lg px-2.5 py-1.5
+        className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-brand-amber
           hover:bg-brand-amber-light dark:hover:bg-amber-950 transition-colors disabled:opacity-50
           ${!canWrite ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
       >
         <ImportIcon />
-        {importing ? "..." : "Importar plantilla"}
+        {importing ? "..." : "Importar"}
       </button>
     </>
   );

@@ -82,17 +82,6 @@ export function Section({
     ? open ? naturalHeight + "px" : "0px"
     : open ? "auto" : "0px";
 
-  // Add button style matching section accent
-  const addBtnStyle = accentHex ? {
-    color: accentHex,
-    borderColor: `${accentHex}40`,
-    background: `${accentHex}10`,
-  } : {
-    color: "#6b7280",
-    borderColor: "rgba(0,0,0,0.1)",
-    background: "rgba(0,0,0,0.02)",
-  };
-
   return (
     <>
       {showModal && (
@@ -155,13 +144,13 @@ export function Section({
             {headerAfter}
 
             {/* Action bar — always at the top of expanded content */}
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 flex-wrap">
+            <div className="flex border-b border-neutral-100 dark:border-neutral-800 divide-x divide-neutral-100 dark:divide-neutral-800">
               <button
                 onClick={() => { if (!disabled) setShowModal(true); }}
                 disabled={disabled}
-                className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all active:scale-[0.97]
-                  ${disabled ? "opacity-40 cursor-not-allowed" : "hover:opacity-80"}`}
-                style={addBtnStyle}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors
+                  ${disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40 active:scale-[0.98]"}`}
+                style={accentHex ? { color: accentHex } : { color: "#6b7280" }}
               >
                 <PlusIcon size={11} />
                 Añadir
