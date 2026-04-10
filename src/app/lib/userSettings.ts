@@ -76,7 +76,16 @@ export function useUserSettings() {
   });
 
   useEffect(() => {
+    // Carga inicial
     setSettings(loadFromStorage());
+
+    // Sincronización entre pestañas: cuando otra pestaña cambia los ajustes,
+    // el evento "storage" se dispara aquí y actualizamos el estado.
+    function onStorageChange(e: StorageEvent) {
+      if (e.key === LS_KEY) setSettings(loadFromStorage());
+    }
+    window.addEventListener("storage", onStorageChange);
+    return () => window.removeEventListener("storage", onStorageChange);
   }, []);
 
   function update(fn: (prev: UserSettings) => UserSettings) {

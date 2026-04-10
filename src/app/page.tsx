@@ -25,6 +25,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { AppTour } from "./components/AppTour";
 import { useUserSettings, SectionKey } from "./lib/userSettings";
 import { usePlan } from "./hooks/usePlan";
+import { QuickAddModal } from "./components/QuickAddModal";
 
 function emptyMonth(): MonthData {
   return { incomes:[], fixedExpenses:[], varExpenses:[], savingsEntries:[], varBudget:0, carryover:0 };
@@ -86,6 +87,7 @@ export default function HomePage() {
   const [importing, setImporting]    = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showWithdrawSaving, setShowWithdrawSaving] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
   const { settings, update: updateSettings } = useUserSettings();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -311,6 +313,17 @@ export default function HomePage() {
       <Navbar />
 
       {showTemplate && <TemplateManager onClose={() => setShowTemplate(false)} />}
+      {showQuickAdd && (
+        <QuickAddModal
+          onAdd={(type, entry) => {
+            if (type === "incomes")       addIncome(entry);
+            else if (type === "savings")       addSaving(entry);
+            else if (type === "fixedExpenses") addFixed({ ...entry, paid: entry.paid ?? false });
+            else                              addVar(entry);
+          }}
+          onClose={() => setShowQuickAdd(false)}
+        />
+      )}
       {showWithdrawSaving && (
         <AddEntryModal
           title="Retirar ahorro"
@@ -470,6 +483,25 @@ export default function HomePage() {
         ) : (
           <>
             <SummaryGrid data={data} totalSavings={totalSavings} isPastMonth={year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())} />
+
+            {/* Quick-add button */}
+            <button
+              onClick={() => { if (canWrite) setShowQuickAdd(true); }}
+              disabled={!canWrite}
+              className="w-full flex items-center justify-center gap-2 py-3.5 mb-1 rounded-2xl
+                border-2 border-dashed border-neutral-200 dark:border-neutral-700
+                text-neutral-400 dark:text-neutral-500
+                hover:border-brand-green hover:text-brand-green
+                dark:hover:border-brand-green dark:hover:text-brand-green
+                hover:bg-brand-green-light/40 dark:hover:bg-brand-green/5
+                transition-all active:scale-[0.99] text-sm font-semibold
+                disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Añadir movimiento
+            </button>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {settings.sectionOrder.map((key: SectionKey) => renderSection(key))}

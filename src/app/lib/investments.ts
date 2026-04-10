@@ -61,15 +61,19 @@ export function groupByCategory(investments: Investment[]): Record<InvestmentCat
 
 export async function loadInvestments(): Promise<Investment[]> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
   const [invRes, contribRes] = await Promise.all([
-    supabase.from("investments").select("*").order("created_at"),
+    supabase.from("investments").select("*").eq("user_id", user.id).order("created_at"),
     supabase.from("investment_contributions").select("*").order("date", { ascending: false }),
   ]);
 
   if (!invRes.data) return [];
 
-  const contributions = contribRes.data ?? [];
+  const ownInvIds = new Set(invRes.data.map(r => r.id));
+  // Filtrar contribuciones solo a las inversiones del usuario
+  const contributions = (contribRes.data ?? []).filter(c => ownInvIds.has(c.investment_id));
 
   return invRes.data.map((row) => ({
     id: row.id,
@@ -115,14 +119,18 @@ export async function updateInvestment(
   category?: InvestmentCategory
 ): Promise<void> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const patch: Record<string, unknown> = { name, isin: isin || null };
   if (category) patch.category = category;
-  await supabase.from("investments").update(patch).eq("id", id);
+  await supabase.from("investments").update(patch).eq("id", id).eq("user_id", user.id);
 }
 
 export async function deleteInvestment(id: string): Promise<void> {
   const supabase = createClient();
-  await supabase.from("investments").delete().eq("id", id);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("investments").delete().eq("id", id).eq("user_id", user.id);
 }
 
 export async function addContribution(
@@ -132,6 +140,13 @@ export async function addContribution(
   notes?: string
 ): Promise<Contribution | null> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Verificar que la inversión pertenece al usuario antes de insertar
+  const { data: inv } = await supabase.from("investments")
+    .select("id").eq("id", investmentId).eq("user_id", user.id).single();
+  if (!inv) return null;
 
   const { data, error } = await supabase
     .from("investment_contributions")
@@ -151,6 +166,17 @@ export async function addContribution(
 
 export async function deleteContribution(id: string): Promise<void> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Verificar propiedad a través de la inversión padre
+  const { data: contrib } = await supabase.from("investment_contributions")
+    .select("investment_id").eq("id", id).single();
+  if (!contrib) return;
+  const { data: inv } = await supabase.from("investments")
+    .select("id").eq("id", contrib.investment_id).eq("user_id", user.id).single();
+  if (!inv) return;
+
   await supabase.from("investment_contributions").delete().eq("id", id);
 }
 
@@ -161,8 +187,18 @@ export async function updateContribution(
   notes?: string
 ): Promise<void> {
   const supabase = createClient();
-  await supabase
-    .from("investment_contributions")
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Verificar propiedad a través de la inversión padre
+  const { data: contrib } = await supabase.from("investment_contributions")
+    .select("investment_id").eq("id", id).single();
+  if (!contrib) return;
+  const { data: inv } = await supabase.from("investments")
+    .select("id").eq("id", contrib.investment_id).eq("user_id", user.id).single();
+  if (!inv) return;
+
+  await supabase.from("investment_contributions")
     .update({ amount, date, notes: notes || null })
     .eq("id", id);
 }

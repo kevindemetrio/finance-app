@@ -159,6 +159,11 @@ export default function InversionesPage() {
                     title: "Orden de categorías",
                     items: catOrder.map(cat => ({ id: cat, label: CATEGORY_LABELS[cat], color: CAT_HEX[cat] })),
                     onMove: (id, dir) => moveCat(id as InvestmentCategory, dir),
+                    onReorder: (newIds) => {
+                      const newOrder = newIds as InvestmentCategory[];
+                      setCatOrder(newOrder);
+                      try { localStorage.setItem(INV_ORDER_KEY, JSON.stringify(newOrder)); } catch {}
+                    },
                   }}
                   onClose={() => setShowSettings(false)}
                 />

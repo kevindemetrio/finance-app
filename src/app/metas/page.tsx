@@ -145,6 +145,10 @@ export default function MetasPage() {
                     title: "Orden de metas",
                     items: sortedGoals.map(g => ({ id: g.id, label: g.name, color: g.color ?? undefined })),
                     onMove: moveGoal,
+                    onReorder: (newIds) => {
+                      setGoalOrder(newIds);
+                      try { localStorage.setItem(GOALS_ORDER_KEY, JSON.stringify(newIds)); } catch {}
+                    },
                   }}
                   onClose={() => setShowSettings(false)}
                 />

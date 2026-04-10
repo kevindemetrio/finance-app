@@ -7,7 +7,7 @@ import {
 } from "../lib/userSettings";
 
 interface PageOrderItem { id: string; label: string; color?: string; }
-interface PageOrderConfig { title: string; items: PageOrderItem[]; onMove: (id: string, dir: -1 | 1) => void; }
+interface PageOrderConfig { title: string; items: PageOrderItem[]; onMove: (id: string, dir: -1 | 1) => void; onReorder?: (newIds: string[]) => void; }
 
 interface Props {
   userEmail: string;
@@ -35,6 +35,10 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
   // Drag-and-drop state for section order
   const [dragKey, setDragKey] = useState<SectionKey | null>(null);
   const [dragOverKey, setDragOverKey] = useState<SectionKey | null>(null);
+
+  // Drag-and-drop state for pageOrder (metas/inversiones)
+  const [dragPageKey, setDragPageKey] = useState<string | null>(null);
+  const [dragOverPageKey, setDragOverPageKey] = useState<string | null>(null);
 
   // Close on Escape
   useEffect(() => {
@@ -87,6 +91,25 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
     setDragKey(null);
     setDragOverKey(null);
   }
+
+  function handlePageDragStart(id: string) { setDragPageKey(id); }
+  function handlePageDragOver(e: React.DragEvent, id: string) {
+    e.preventDefault();
+    if (id !== dragPageKey) setDragOverPageKey(id);
+  }
+  function handlePageDrop(id: string) {
+    if (!dragPageKey || dragPageKey === id || !pageOrder?.onReorder) {
+      setDragPageKey(null); setDragOverPageKey(null); return;
+    }
+    const ids = pageOrder.items.map(it => it.id);
+    const fromIdx = ids.indexOf(dragPageKey);
+    const toIdx = ids.indexOf(id);
+    ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, dragPageKey);
+    pageOrder.onReorder(ids);
+    setDragPageKey(null); setDragOverPageKey(null);
+  }
+  function handlePageDragEnd() { setDragPageKey(null); setDragOverPageKey(null); }
 
   function toggleField(section: SectionKey, field: keyof SectionPrefs) {
     onUpdate(prev => ({
@@ -204,10 +227,25 @@ export function SettingsPanel({ userEmail, settings, onUpdate, onOpenTemplate, p
               <div className="mt-1.5 rounded-xl border border-neutral-100 dark:border-neutral-700/50 overflow-hidden">
                 {pageOrder.items.map((item, i) => (
                   <div key={item.id}
+                    draggable={!!pageOrder.onReorder}
+                    onDragStart={() => handlePageDragStart(item.id)}
+                    onDragOver={e => handlePageDragOver(e, item.id)}
+                    onDrop={() => handlePageDrop(item.id)}
+                    onDragEnd={handlePageDragEnd}
                     className={`flex items-center gap-2.5 px-3 py-2.5 bg-white dark:bg-neutral-800/30
-                      hover:bg-neutral-50 dark:hover:bg-neutral-800/60 transition-colors
-                      ${i < pageOrder.items.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}`}
+                      transition-colors select-none
+                      ${i < pageOrder.items.length - 1 ? "border-b border-neutral-100 dark:border-neutral-700/50" : ""}
+                      ${dragPageKey === item.id ? "opacity-40" : ""}
+                      ${dragOverPageKey === item.id && dragPageKey !== item.id
+                        ? "bg-blue-50 dark:bg-blue-950/20 border-l-2 border-l-brand-blue"
+                        : "hover:bg-neutral-50 dark:hover:bg-neutral-800/60"
+                      }`}
                   >
+                    {pageOrder.onReorder && (
+                      <svg className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 shrink-0 cursor-grab" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/>
+                      </svg>
+                    )}
                     {item.color
                       ? <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
                       : <span className="w-5 text-center text-[11px] font-bold text-neutral-300 dark:text-neutral-700 select-none tabular-nums">{i + 1}</span>
