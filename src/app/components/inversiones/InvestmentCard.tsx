@@ -256,6 +256,8 @@ export function InvestmentCard({ investment, onChange }: Props) {
   }
 
   async function handleDeleteContrib(id: string) {
+    const ok = await confirmDialog({ title: "¿Eliminar aportación?", danger: true });
+    if (!ok) return;
     await deleteContribution(id);
     onChange();
   }
