@@ -488,7 +488,7 @@ export default function HomePage() {
             <button
               onClick={() => { if (canWrite) setShowQuickAdd(true); }}
               disabled={!canWrite}
-              className="w-full flex items-center justify-center gap-2 py-3.5 mb-1 rounded-2xl
+              className="w-full flex items-center justify-center gap-2 py-3.5 my-4 rounded-2xl
                 border-2 border-dashed border-neutral-200 dark:border-neutral-700
                 text-neutral-400 dark:text-neutral-500
                 hover:border-brand-green hover:text-brand-green
