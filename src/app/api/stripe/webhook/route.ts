@@ -47,35 +47,59 @@ export async function POST(request: NextRequest) {
     // ── Pago único (Lifetime) ─────────────────────────────────────────────────
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-
-      // Solo procesar pagos únicos; las suscripciones las maneja customer.subscription.created
-      if (session.mode !== "payment") break;
-
       const userId = session.metadata?.user_id;
       if (!userId) break;
 
-      // Verificar que corresponde al price ID de Lifetime
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
-      const priceId = lineItems.data[0]?.price?.id;
-      if (!priceId || priceId !== process.env.STRIPE_PRICE_LIFETIME) break;
+      if (session.mode === "payment") {
+        // ── Pago único (Lifetime) ──────────────────────────────────────────
+        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+        const priceId = lineItems.data[0]?.price?.id;
+        if (!priceId || priceId !== process.env.STRIPE_PRICE_LIFETIME) break;
 
-      // Marcar is_lifetime = true en la fila del usuario
-      await supabaseAdmin
-        .from("subscriptions")
-        .update({ is_lifetime: true })
-        .eq("user_id", userId);
+        await supabaseAdmin
+          .from("subscriptions")
+          .update({ is_lifetime: true })
+          .eq("user_id", userId);
 
-      // Cancelar cualquier suscripción recurrente activa del customer en Stripe
-      const customerId = session.customer as string;
-      if (customerId) {
-        const activeSubs = await stripe.subscriptions.list({
-          customer: customerId,
-          status: "active",
-          limit: 10,
-        });
-        for (const sub of activeSubs.data) {
-          await stripe.subscriptions.cancel(sub.id);
+        const customerId = session.customer as string;
+        if (customerId) {
+          const activeSubs = await stripe.subscriptions.list({
+            customer: customerId,
+            status: "active",
+            limit: 10,
+          });
+          for (const sub of activeSubs.data) {
+            await stripe.subscriptions.cancel(sub.id);
+          }
         }
+
+      } else if (session.mode === "subscription" && session.subscription) {
+        // ── Suscripción nueva — fallback por si customer.subscription.created
+        //    no está registrado en el endpoint de Stripe ─────────────────────
+        const subscription = await stripe.subscriptions.retrieve(
+          session.subscription as string
+        );
+        const priceId = subscription.items.data[0]?.price.id;
+        const plan = priceId ? determinePlan(priceId) : null;
+        const periodEndTs = subscription.items.data[0]?.current_period_end;
+        const periodEnd = periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null;
+        const priceInterval = subscription.items.data[0]?.price?.recurring?.interval;
+        const billingInterval = priceInterval === "year" ? "annual" : "monthly";
+
+        const payload = {
+          user_id: userId,
+          plan: plan ?? "basic",
+          status: subscription.cancel_at_period_end ? "canceling" : subscription.status,
+          provider: "stripe",
+          provider_customer_id: subscription.customer as string,
+          provider_subscription_id: subscription.id,
+          current_period_end: periodEnd,
+          billing_interval: billingInterval,
+        };
+
+        await supabaseAdmin
+          .from("subscriptions")
+          .upsert(payload, { onConflict: "user_id" });
       }
       break;
     }
