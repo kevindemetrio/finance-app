@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "./app/lib/supabase/middleware";
 
 // Rutas de API que gestionan su propia autenticación o no requieren auth
