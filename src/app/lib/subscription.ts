@@ -6,6 +6,7 @@ export type SubscriptionStatus =
   | "trialing"
   | "past_due"
   | "canceled"
+  | "canceling"  // activa pero con cancel_at_period_end=true en Stripe
   | "expired";
 
 export interface Subscription {

@@ -449,6 +449,75 @@ export async function saveCategoryBudget(year: number, month: number, category: 
   await supabase.from("category_budgets").upsert({ user_id: user.id, year, month, category, budget }, { onConflict: "user_id,year,month,category" });
 }
 
+export async function deleteCategoryBudget(year: number, month: number, category: Category): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("category_budgets").delete().eq("user_id", user.id).eq("year", year).eq("month", month).eq("category", category);
+}
+
+// ─── Budget templates ──────────────────────────────────────────────────────────
+
+// Categoría reservada para el presupuesto global de variables en la plantilla
+export const GLOBAL_BUDGET_KEY = "__global__";
+
+export interface BudgetTemplateItem {
+  id: string;
+  category: Category | typeof GLOBAL_BUDGET_KEY;
+  budget: number;
+}
+
+export async function loadBudgetTemplate(): Promise<BudgetTemplateItem[]> {
+  const supabase = createClient();
+  const userId = await getSessionUserId();
+  if (!userId) return [];
+  const { data } = await supabase
+    .from("budget_templates")
+    .select("id, category, budget")
+    .eq("user_id", userId)
+    .order("category");
+  return (data ?? []).map(r => ({ id: r.id, category: r.category as Category | typeof GLOBAL_BUDGET_KEY, budget: Number(r.budget) }));
+}
+
+export async function saveBudgetTemplateItem(category: Category | typeof GLOBAL_BUDGET_KEY, budget: number): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("budget_templates").upsert(
+    { user_id: user.id, category, budget },
+    { onConflict: "user_id,category" }
+  );
+}
+
+export async function deleteBudgetTemplateItem(id: string): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("budget_templates").delete().eq("id", id).eq("user_id", user.id);
+}
+
+export async function importBudgetTemplate(
+  year: number, month: number, items: BudgetTemplateItem[],
+  onGlobalBudget: (v: number) => void,
+): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const globalItem = items.find(i => i.category === GLOBAL_BUDGET_KEY);
+  const catItems   = items.filter(i => i.category !== GLOBAL_BUDGET_KEY);
+
+  if (globalItem) {
+    await saveMonthConfig(year, month, globalItem.budget);
+    onGlobalBudget(globalItem.budget);
+  }
+
+  if (catItems.length > 0) {
+    const rows = catItems.map(i => ({ user_id: user.id, year, month, category: i.category, budget: i.budget }));
+    await supabase.from("category_budgets").upsert(rows, { onConflict: "user_id,year,month,category" });
+  }
+}
+
 // ─── Savings projection ───────────────────────────────────────────────────────
 
 export async function getAvgMonthlySavings(limitMonths = 6): Promise<number> {

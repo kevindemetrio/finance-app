@@ -78,11 +78,11 @@ function buildPlanInfo(
     canWrite = true;
   } else if (
     (plan === "pro" || plan === "family") &&
-    status === "active"
+    (status === "active" || status === "canceling")
   ) {
     effectivePlan = "pro";
     canWrite = true;
-  } else if (plan === "basic" && status === "active") {
+  } else if (plan === "basic" && (status === "active" || status === "canceling")) {
     effectivePlan = "basic";
     canWrite = true;
   } else {

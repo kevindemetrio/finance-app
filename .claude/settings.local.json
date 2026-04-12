@@ -9,7 +9,8 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
-      "Bash(grep -i \"query\\\\|supabase\\\\|\\\\${\")"
+      "Bash(grep -i \"query\\\\|supabase\\\\|\\\\${\")",
+      "Bash(find /c/Users/l0l1n/Desktop/finance-app -type f -name \"*.sql\" -not -path \"*/node_modules/*\" -exec wc -l {} \\\\;)"
     ]
   }
 }

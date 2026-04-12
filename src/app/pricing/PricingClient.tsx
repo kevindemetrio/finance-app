@@ -21,12 +21,22 @@ interface Props {
   prices: Prices;
 }
 
+interface UpgradeConfirm {
+  priceId: string;
+  label: string;
+  price: string;
+}
+
 export default function PricingClient({ prices }: Props) {
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [upgradeConfirm, setUpgradeConfirm] = useState<UpgradeConfirm | null>(null);
   const planInfo = usePlan();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const success = searchParams.get("success");
@@ -53,14 +63,8 @@ export default function PricingClient({ prices }: Props) {
     setLoadingPlan(null);
   }
 
-  async function handleCheckout(priceId: string) {
-    // Usuarios no autenticados → redirigir a registro
-    const { data: { user } } = await createClient().auth.getUser();
-    if (!user) {
-      router.push("/auth/signup");
-      return;
-    }
-
+  // Ejecuta el checkout/upgrade ya confirmado
+  async function executeCheckout(priceId: string) {
     setLoadingPlan(priceId);
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -68,12 +72,46 @@ export default function PricingClient({ prices }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId }),
       });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error ?? "Error al iniciar el pago.", "error");
+        return;
+      }
+      if (data.upgraded) {
+        toast("¡Plan actualizado correctamente!", "success");
+        router.push("/ajustes");
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      }
     } catch {
       toast("Error al iniciar el pago. Inténtalo de nuevo.", "error");
     }
     setLoadingPlan(null);
+  }
+
+  // Si el usuario ya tiene suscripción activa → pedir confirmación antes del upgrade/downgrade
+  // Si no tiene nada activo → ir directo al checkout de Stripe
+  async function handleCheckout(priceId: string, label: string, price: string) {
+    const { data: { user } } = await createClient().auth.getUser();
+    if (!user) {
+      router.push("/auth/signup");
+      return;
+    }
+
+    const hasActiveSub =
+      (planInfo.status === "active" || planInfo.status === "canceling") &&
+      !planInfo.isLifetime &&
+      !planInfo.loading;
+
+    if (hasActiveSub) {
+      setUpgradeConfirm({ priceId, label, price });
+      return;
+    }
+
+    await executeCheckout(priceId);
   }
 
   const currentPlan = planInfo.plan;
@@ -82,12 +120,49 @@ export default function PricingClient({ prices }: Props) {
   const basicPriceId = annual ? prices.basicAnnual : prices.basicMonthly;
   const proPriceId = annual ? prices.proAnnual : prices.proMonthly;
 
-  const isCurrentBasic = !planLoading && currentPlan === "basic";
-  const isCurrentPro = !planLoading && currentPlan === "pro";
+  const selectedInterval = annual ? "annual" : "monthly";
+  const currentInterval = planInfo.billingInterval;
+
+  // "Plan actual" solo si coinciden plan E intervalo — así el toggle permite cambiar ciclo
+  const isCurrentBasic = !planLoading && currentPlan === "basic" && currentInterval === selectedInterval;
+  const isCurrentPro = !planLoading && currentPlan === "pro" && currentInterval === selectedInterval;
   const isLifetime = !planLoading && planInfo.isLifetime;
 
   return (
     <SeasonWrapper>
+      {/* Modal de confirmación de upgrade/downgrade */}
+      {upgradeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-1">
+              Cambiar a {upgradeConfirm.label}
+            </h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-5">
+              Se calculará la diferencia proporcional respecto a tu plan actual y se cobrará ahora.
+              El nuevo precio a partir del próximo ciclo será {upgradeConfirm.price}.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setUpgradeConfirm(null)}
+                className="flex-1 py-2 rounded-xl text-sm font-medium border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  const priceId = upgradeConfirm.priceId;
+                  setUpgradeConfirm(null);
+                  await executeCheckout(priceId);
+                }}
+                className="flex-1 py-2 rounded-xl text-sm font-medium bg-brand-green text-white hover:opacity-90 transition-colors"
+              >
+                Confirmar cambio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-28 lg:pb-16">
 
@@ -182,8 +257,8 @@ export default function PricingClient({ prices }: Props) {
               </button>
             ) : (
               <button
-                disabled={planLoading || loadingPlan !== null}
-                onClick={() => handleCheckout(basicPriceId)}
+                disabled={mounted && (planLoading || loadingPlan !== null)}
+                onClick={() => handleCheckout(basicPriceId, `Basic ${annual ? "Anual" : "Mensual"}`, annual ? "41,99 €/año (3,49 €/mes)" : "3,99 €/mes")}
                 className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90 disabled:opacity-60"
               >
                 {loadingPlan === basicPriceId ? "Redirigiendo…" : "Empezar con Basic"}
@@ -242,8 +317,8 @@ export default function PricingClient({ prices }: Props) {
               </button>
             ) : (
               <button
-                disabled={planLoading || loadingPlan !== null}
-                onClick={() => handleCheckout(proPriceId)}
+                disabled={mounted && (planLoading || loadingPlan !== null)}
+                onClick={() => handleCheckout(proPriceId, `Pro ${annual ? "Anual" : "Mensual"}`, annual ? "47,99 €/año (3,99 €/mes)" : "4,99 €/mes")}
                 className="w-full py-2.5 rounded-xl text-sm font-medium transition-colors bg-brand-green text-white hover:opacity-90 disabled:opacity-60"
               >
                 {loadingPlan === proPriceId ? "Redirigiendo…" : "Empezar con Pro"}

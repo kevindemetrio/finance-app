@@ -10,6 +10,7 @@ import { Navbar, DesktopTabs } from "../components/Navbar";
 import { SeasonWrapper } from "../components/SeasonWrapper";
 import { ThemeToggle } from "../components/ThemeProvider";
 import { TemplateManager } from "../components/TemplateManager";
+import { BudgetTemplateManager } from "../components/BudgetTemplateManager";
 import { toast, confirm } from "../components/Toast";
 import { GhostButton, PrimaryButton, SaveButton, TextInput } from "../components/ui";
 import { useCategories } from "../components/CategoriesProvider";
@@ -68,6 +69,7 @@ export default function AjustesPage() {
   const [newCatName, setNewCatName] = useState("");
   const [addingCat, setAddingCat] = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [showBudgetTemplate, setShowBudgetTemplate] = useState(false);
 
   // ── FINANZAS — section colors ───────────────────────────────────────────
   const [sectionColors, setSectionColors] = useState<Record<string, string>>({});
@@ -299,6 +301,7 @@ export default function AjustesPage() {
     <SeasonWrapper>
       <Navbar />
       {showTemplate && <TemplateManager onClose={() => setShowTemplate(false)} />}
+      {showBudgetTemplate && <BudgetTemplateManager onClose={() => setShowBudgetTemplate(false)} />}
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 lg:pb-10">
 
@@ -421,16 +424,22 @@ export default function AjustesPage() {
                 </div>
                 <VerPlanesButton />
               </>
-            ) : planInfo.effectivePlan === "basic" && planInfo.status === "active" ? (
+            ) : planInfo.effectivePlan === "basic" && (planInfo.status === "active" || planInfo.status === "canceling") ? (
               <>
                 <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Basic</p>
                     <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      {getPlanPrice("basic", planInfo.billingInterval)} · Renovación: {periodEnd ?? "—"}
+                      {planInfo.status === "canceling"
+                        ? `Cancela el: ${periodEnd ?? "—"}`
+                        : `${getPlanPrice("basic", planInfo.billingInterval)} · Renovación: ${periodEnd ?? "—"}`}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                  {planInfo.status === "canceling" ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">CANCELADO</span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                  )}
                 </div>
                 <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <button
@@ -443,16 +452,22 @@ export default function AjustesPage() {
                 </div>
                 <VerPlanesButton />
               </>
-            ) : planInfo.effectivePlan === "pro" && planInfo.status === "active" ? (
+            ) : planInfo.effectivePlan === "pro" && (planInfo.status === "active" || planInfo.status === "canceling") ? (
               <>
                 <div className="px-4 py-3 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800">
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plan actual: Pro</p>
                     <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      {getPlanPrice("pro", planInfo.billingInterval)} · Renovación: {periodEnd ?? "—"}
+                      {planInfo.status === "canceling"
+                        ? `Cancela el: ${periodEnd ?? "—"}`
+                        : `${getPlanPrice("pro", planInfo.billingInterval)} · Renovación: ${periodEnd ?? "—"}`}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                  {planInfo.status === "canceling" ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">CANCELADO</span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green">ACTIVO</span>
+                  )}
                 </div>
                 <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <button
@@ -580,6 +595,22 @@ export default function AjustesPage() {
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg shrink-0 ml-4
                   bg-brand-amber-light dark:bg-amber-950/50 text-brand-amber
                   hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+              >
+                <AjGridIcon /> Gestionar
+              </button>
+            </div>
+
+            {/* Plantilla de presupuestos */}
+            <div className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Plantilla de presupuestos</p>
+                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">Define tus límites por categoría para importarlos cada mes</p>
+              </div>
+              <button
+                onClick={() => setShowBudgetTemplate(true)}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg shrink-0 ml-4
+                  bg-brand-purple-light dark:bg-purple-950/50 text-brand-purple
+                  hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors"
               >
                 <AjGridIcon /> Gestionar
               </button>
@@ -917,8 +948,8 @@ function ProtectedSection({ isLocked, children }: { isLocked: boolean; children:
 
 function getPlanPrice(plan: string, interval: string | null): string {
   if (interval === "lifetime") return "109,99 € · pago único";
-  if (plan === "basic") return interval === "annual" ? "2,99 €/mes · facturado anualmente" : "3,49 €/mes";
-  if (plan === "pro")   return interval === "annual" ? "3,99 €/mes · facturado anualmente" : "4,99 €/mes";
+  if (plan === "basic") return interval === "annual" ? "41,99 €/año · 3,49 €/mes" : "3,99 €/mes";
+  if (plan === "pro")   return interval === "annual" ? "47,99 €/año · 3,99 €/mes" : "4,99 €/mes";
   return "";
 }
 
