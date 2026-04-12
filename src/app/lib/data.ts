@@ -89,13 +89,13 @@ export function fmtEur(n: number): string {
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 /**
- * Devuelve el user_id desde la sesión en caché (sin llamada de red).
- * Usar en operaciones de lectura donde RLS ya aplica y solo necesitamos
- * el id para filtrar explícitamente como defensa en profundidad.
+ * Devuelve el user_id verificado contra el servidor de Supabase.
+ * Usa getUser() en lugar de getSession() para garantizar que el token
+ * no ha sido revocado (p.ej. tras cambio de contraseña).
  */
 async function getSessionUserId(): Promise<string | null> {
-  const { data: { session } } = await createClient().auth.getSession();
-  return session?.user?.id ?? null;
+  const { data: { user } } = await createClient().auth.getUser();
+  return user?.id ?? null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useRouter } from "next/navigation";
 import {
   Entry, MonthData, CategoryBudget, getAllTimeSavings, getCarryover,
@@ -53,6 +53,12 @@ export default function HomePage() {
 
   type MonthResult = { data: MonthData; totalSavings: number; catBudgets: CategoryBudget[] };
   const swrMonthKey = historyBlocked ? null : (["month", year, month] as const);
+  const { mutate: globalMutate } = useSWRConfig();
+  const invalidateDashboard = useCallback(() => {
+    globalMutate(`annualData-${year}`);
+    globalMutate(`categoryData-${year}-${month}`);
+  }, [year, month, globalMutate]);
+
   const { data: monthResult, isLoading: monthLoading, error: monthError, mutate: mutateMonth } = useSWR(
     swrMonthKey,
     async ([, y, m]) => {
@@ -133,6 +139,7 @@ export default function HomePage() {
       mutateMonth(current => current
         ? { ...current, data: { ...current.data, fixedExpenses: [...current.data.fixedExpenses, ...newEntries] } }
         : current, { revalidate: false });
+      invalidateDashboard();
       toast(`+${newEntries.length} importados`);
     } else {
       toast("Ya están todos", "info");
@@ -152,8 +159,9 @@ export default function HomePage() {
     if (type === "saving") getAllTimeSavings(year, month).then(savings =>
       mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
     );
+    invalidateDashboard();
     toast("Movimiento añadido");
-  }, [year, month, mutateMonth]);
+  }, [year, month, mutateMonth, invalidateDashboard]);
 
   const updateEntryInSection = useCallback(async (
     idx: number, updated: Entry, type: "income"|"fixed"|"variable"|"saving",
@@ -169,7 +177,8 @@ export default function HomePage() {
     if (type === "saving") getAllTimeSavings(year, month).then(savings =>
       mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
     );
-  }, [year, month, mutateMonth]);
+    invalidateDashboard();
+  }, [year, month, mutateMonth, invalidateDashboard]);
 
   const deleteEntryFromSection = useCallback(async (
     idx: number, type: string,
@@ -185,8 +194,9 @@ export default function HomePage() {
     if (type === "saving") getAllTimeSavings(year, month).then(savings =>
       mutateMonth(current => current ? { ...current, totalSavings: savings } : current, { revalidate: false })
     );
+    invalidateDashboard();
     toast("Movimiento eliminado", "info");
-  }, [data, year, month, mutateMonth]);
+  }, [data, year, month, mutateMonth, invalidateDashboard]);
 
   const addIncome    = (e: Entry) => addEntryToSection(e, "income", "incomes");
   const updateIncome = (i: number, e: Entry) => updateEntryInSection(i, e, "income", "incomes");
