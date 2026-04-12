@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonHTMLAttributes, InputHTMLAttributes } from "react";
+import { ButtonHTMLAttributes, InputHTMLAttributes, forwardRef } from "react";
 
 export function IconButton({
   danger, className = "", children, ...props
@@ -23,9 +23,11 @@ export function IconButton({
   );
 }
 
-export function TextInput({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`input-base ${className}`} {...props} />;
-}
+export const TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function TextInput({ className = "", ...props }, ref) {
+    return <input ref={ref} className={`input-base ${className}`} {...props} />;
+  }
+);
 
 type BadgeVariant = "paid" | "pending";
 export function Badge({ variant, onClick }: { variant: BadgeVariant; onClick?: () => void }) {
